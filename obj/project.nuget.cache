@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "dgSpecHash": "r1m1Dfmv6io=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\johns\\Projects\\SpacePirates.Console\\SpacePirates.Console.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.aspnetcore.openapi\\8.0.8\\microsoft.aspnetcore.openapi.8.0.8.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.entityframeworkcore\\8.0.13\\microsoft.entityframeworkcore.8.0.13.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\8.0.13\\microsoft.entityframeworkcore.abstractions.8.0.13.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.entityframeworkcore.analyzers\\8.0.13\\microsoft.entityframeworkcore.analyzers.8.0.13.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.entityframeworkcore.relational\\8.0.13\\microsoft.entityframeworkcore.relational.8.0.13.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.apidescription.server\\6.0.5\\microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.caching.abstractions\\8.0.0\\microsoft.extensions.caching.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.caching.memory\\8.0.1\\microsoft.extensions.caching.memory.8.0.1.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\8.0.1\\microsoft.extensions.dependencyinjection.8.0.1.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.logging\\8.0.1\\microsoft.extensions.logging.8.0.1.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.2\\microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.options\\8.0.2\\microsoft.extensions.options.8.0.2.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.extensions.primitives\\8.0.0\\microsoft.extensions.primitives.8.0.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\microsoft.openapi\\1.6.23\\microsoft.openapi.1.6.23.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\mysqlconnector\\2.3.5\\mysqlconnector.2.3.5.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\pomelo.entityframeworkcore.mysql\\8.0.0\\pomelo.entityframeworkcore.mysql.8.0.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\swashbuckle.aspnetcore\\8.1.0\\swashbuckle.aspnetcore.8.1.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\8.1.0\\swashbuckle.aspnetcore.swagger.8.1.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\8.1.0\\swashbuckle.aspnetcore.swaggergen.8.1.0.nupkg.sha512",
+    "C:\\Users\\johns\\.nuget\\packages\\swashbuckle.aspnetcore.swaggerui\\8.1.0\\swashbuckle.aspnetcore.swaggerui.8.1.0.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "SpacePirates.API depends on Swashbuckle.AspNetCore (>= 8.0.13) but Swashbuckle.AspNetCore 8.0.13 was not found. An approximate best match of Swashbuckle.AspNetCore 8.1.0 was resolved.",
+      "libraryId": "Swashbuckle.AspNetCore",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
+}
