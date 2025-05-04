@@ -1,65 +1,223 @@
 using SpacePirates.Console.Core.Interfaces;
-using SpacePirates.API.Models;
+using SpacePirates.Console.UI.Components;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SpacePirates.Console.UI.ConsoleRenderer
 {
     public class ConsoleRenderer : IRenderer
     {
-        private readonly int _windowWidth;
-        private readonly int _windowHeight;
-        
-        public ConsoleRenderer(int width, int height)
+        private ConsoleBuffer[,] _currentBuffer;
+        private ConsoleBuffer[,] _previousBuffer;
+        private int _width;
+        private int _height;
+        private bool _isInitialized;
+        private readonly object _consoleLock = new object();
+
+        // UI Components
+        private GameViewComponent? _gameComponent;
+        private StatusComponent? _statusComponent;
+        private HelpComponent? _helpComponent;
+        private IGameState? _currentGameState;
+
+        public ConsoleRenderer()
         {
-            _windowWidth = width;
-            _windowHeight = height;
+            _isInitialized = false;
+            // Initialize buffers with minimum size that will be resized in Initialize
+            _currentBuffer = new ConsoleBuffer[1, 1];
+            _previousBuffer = new ConsoleBuffer[1, 1];
+            _currentBuffer[0, 0] = new ConsoleBuffer();
+            _previousBuffer[0, 0] = new ConsoleBuffer();
         }
 
-        public void Initialize()
+        public void Initialize(int width, int height)
         {
+            _width = width;
+            _height = height;
+
+            // Initialize buffers
+            _currentBuffer = new ConsoleBuffer[width, height];
+            _previousBuffer = new ConsoleBuffer[width, height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    _currentBuffer[x, y] = new ConsoleBuffer();
+                    _previousBuffer[x, y] = new ConsoleBuffer();
+                }
+            }
+
+            // Configure console
+            System.Console.Title = "Space Pirates";
             System.Console.CursorVisible = false;
-            System.Console.SetWindowSize(_windowWidth, _windowHeight);
-            System.Console.SetBufferSize(_windowWidth, _windowHeight);
+            System.Console.OutputEncoding = Encoding.UTF8;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                System.Console.WindowWidth = width;
+                System.Console.WindowHeight = height;
+                System.Console.BufferWidth = width;
+                System.Console.BufferHeight = height;
+            }
+
+            // Initialize UI components with appropriate dimensions
+            int gameWidth = 80;  // Main game area width
+            int statusWidth = width - gameWidth - 1;  // Remaining width for status
+            int helpHeight = 3;  // Height for help section at bottom
+            int mainHeight = height - helpHeight;
+
+            _gameComponent = new GameViewComponent(0, 0, gameWidth, mainHeight);
+            // _statusComponent = new StatusComponent(gameWidth + 1, 0, statusWidth, mainHeight);
+            // _helpComponent = new HelpComponent(0, mainHeight, width, helpHeight);
+
+            _isInitialized = true;
             Clear();
         }
 
-        public void Render(IGameState gameState)
+        public void BeginFrame()
         {
-            Clear();
-            RenderShip(gameState.PlayerShip);
-            RenderStats(gameState.PlayerShip);
+            if (!_isInitialized) throw new InvalidOperationException("Renderer not initialized");
+            
+            // Mark all cells as clean for the new frame
+            for (int y = 0; y < _height; y++)
+            {
+                for (int x = 0; x < _width; x++)
+                {
+                    _currentBuffer[x, y].IsDirty = false;
+                }
+            }
+        }
+
+        public void EndFrame()
+        {
+            if (!_isInitialized) return;
+
+            // Create buffer writers for each component
+            var gameBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
+            var statusBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
+            var helpBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
+
+            // Render all components
+            _gameComponent?.Render(gameBuffer);
+            _statusComponent?.Render(statusBuffer);
+            _helpComponent?.Render(helpBuffer);
+
+            // Write changes to console
+            var sb = new StringBuilder();
+            ConsoleColor currentFg = ConsoleColor.Gray;
+            ConsoleColor currentBg = ConsoleColor.Black;
+
+            lock (_consoleLock)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    for (int x = 0; x < _width; x++)
+                    {
+                        var current = _currentBuffer[x, y];
+                        var previous = _previousBuffer[x, y];
+
+                        if (current.IsDirty || 
+                            current.Character != previous.Character ||
+                            current.Foreground != previous.Foreground ||
+                            current.Background != previous.Background)
+                        {
+                            // Move cursor
+                            sb.Append($"\x1b[{y + 1};{x + 1}H");
+
+                            // Update colors if needed
+                            if (current.Foreground != currentFg || current.Background != currentBg)
+                            {
+                                sb.Append($"\x1b[38;5;{GetColorCode(current.Foreground)}m");
+                                sb.Append($"\x1b[48;5;{GetColorCode(current.Background)}m");
+                                currentFg = current.Foreground;
+                                currentBg = current.Background;
+                            }
+
+                            sb.Append(current.Character);
+
+                            // Copy to previous buffer
+                            previous.Character = current.Character;
+                            previous.Foreground = current.Foreground;
+                            previous.Background = current.Background;
+                        }
+                    }
+                }
+
+                // Reset colors
+                sb.Append("\x1b[0m");
+                System.Console.Write(sb.ToString());
+            }
         }
 
         public void Clear()
         {
-            System.Console.Clear();
+            if (!_isInitialized) return;
+
+            lock (_consoleLock)
+            {
+                System.Console.Write("\x1b[2J\x1b[H");
+                for (int y = 0; y < _height; y++)
+                {
+                    for (int x = 0; x < _width; x++)
+                    {
+                        _currentBuffer[x, y].Character = ' ';
+                        _currentBuffer[x, y].Foreground = ConsoleColor.Gray;
+                        _currentBuffer[x, y].Background = ConsoleColor.Black;
+                        _currentBuffer[x, y].IsDirty = true;
+                    }
+                }
+            }
         }
 
-        public void DisplayMessage(string message, int x, int y)
+        public void HandleInput(ConsoleKeyInfo keyInfo)
         {
-            System.Console.SetCursorPosition(x, y);
-            System.Console.Write(message);
+            _gameComponent?.HandleInput(keyInfo);
         }
 
-        private void RenderShip(Ship ship)
+        public void UpdateGameState(IGameState gameState)
         {
-            int shipX = (int)ship.Position.X;
-            int shipY = (int)ship.Position.Y;
-            
-            // Simple ship representation
-            System.Console.SetCursorPosition(shipX, shipY);
-            System.Console.Write(ship.Shield.IsActive ? "⊡" : "□");
+            _currentGameState = gameState;
+            _gameComponent?.Update(gameState);
+            _statusComponent?.UpdateStatus(gameState);
         }
 
-        private void RenderStats(Ship ship)
+        public void SetHelpText(string text)
         {
-            // Render shield status
-            DisplayMessage($"Shield: {ship.Shield.CurrentIntegrity}/{ship.Shield.CalculateMaxCapacity()}", 0, _windowHeight - 3);
-            
-            // Render fuel status
-            DisplayMessage($"Fuel: {ship.FuelSystem.CurrentFuel}/{ship.FuelSystem.CalculateMaxCapacity()}", 0, _windowHeight - 2);
-            
-            // Render cargo status
-            DisplayMessage($"Cargo: {ship.CargoSystem.CurrentLoad}/{ship.CargoSystem.CalculateMaxCapacity()}", 0, _windowHeight - 1);
+            _helpComponent?.SetHelpText(text);
+        }
+
+        private static int GetColorCode(ConsoleColor color)
+        {
+            return color switch
+            {
+                ConsoleColor.Black => 0,
+                ConsoleColor.DarkBlue => 4,
+                ConsoleColor.DarkGreen => 2,
+                ConsoleColor.DarkCyan => 6,
+                ConsoleColor.DarkRed => 1,
+                ConsoleColor.DarkMagenta => 5,
+                ConsoleColor.DarkYellow => 3,
+                ConsoleColor.Gray => 7,
+                ConsoleColor.DarkGray => 8,
+                ConsoleColor.Blue => 12,
+                ConsoleColor.Green => 10,
+                ConsoleColor.Cyan => 14,
+                ConsoleColor.Red => 9,
+                ConsoleColor.Magenta => 13,
+                ConsoleColor.Yellow => 11,
+                ConsoleColor.White => 15,
+                _ => 7
+            };
+        }
+
+        public void Dispose()
+        {
+            if (_isInitialized)
+            {
+                System.Console.CursorVisible = true;
+                System.Console.ResetColor();
+                System.Console.Clear();
+            }
         }
     }
 } 

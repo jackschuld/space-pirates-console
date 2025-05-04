@@ -1,21 +1,33 @@
-﻿using SpacePirates.Console.Game;
+﻿using SpacePirates.Console.Game.Engine;
+using SpacePirates.Console.UI.ConsoleRenderer;
 
 namespace SpacePirates.Console;
 
 public class Program
 {
+    private const int WINDOW_WIDTH = 120;  // Increased width for better layout
+    private const int WINDOW_HEIGHT = 45;  // Increased height to ensure all content is visible
+
     public static void Main(string[] args)
     {
-        // Clear the console and hide the cursor
-        System.Console.Clear();
-        System.Console.CursorVisible = false;
+        try
+        {
+            // Create renderer
+            var renderer = new ConsoleRenderer();
 
-        // Initialize and start the game
-        var game = new GameEngine();
-        game.Start();
+            // Create and initialize game engine
+            var engine = new GameEngine(renderer);
+            engine.Initialize();
 
-        // Cleanup when game exits
-        System.Console.CursorVisible = true;
-        System.Console.Clear();
+            // Run the game
+            engine.Run();
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Fatal error: {ex.Message}");
+            System.Console.WriteLine(ex.StackTrace);
+            System.Console.WriteLine("\nPress any key to exit...");
+            System.Console.ReadKey(true);
+        }
     }
 }

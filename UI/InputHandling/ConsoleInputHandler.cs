@@ -11,7 +11,7 @@ namespace SpacePirates.Console.UI.InputHandling
 
         public ICommand GetCommand()
         {
-            return HasPendingCommands ? _commandQueue.Dequeue() : new Command(CommandType.None);
+            return HasPendingCommands ? _commandQueue.Dequeue() : new Command(Core.Interfaces.CommandType.None);
         }
 
         public void ProcessInput()
@@ -31,24 +31,24 @@ namespace SpacePirates.Console.UI.InputHandling
         {
             return key.Key switch
             {
-                ConsoleKey.W or ConsoleKey.UpArrow => new Command(CommandType.Move, Direction.Up),
-                ConsoleKey.S or ConsoleKey.DownArrow => new Command(CommandType.Move, Direction.Down),
-                ConsoleKey.A or ConsoleKey.LeftArrow => new Command(CommandType.Move, Direction.Left),
-                ConsoleKey.D or ConsoleKey.RightArrow => new Command(CommandType.Move, Direction.Right),
-                ConsoleKey.Spacebar => new Command(CommandType.ToggleShields),
-                ConsoleKey.C => new Command(CommandType.ViewCargo),
-                ConsoleKey.Escape => new Command(CommandType.Exit),
+                ConsoleKey.W or ConsoleKey.UpArrow => new Command(Core.Interfaces.CommandType.Move, Direction.Up),
+                ConsoleKey.S or ConsoleKey.DownArrow => new Command(Core.Interfaces.CommandType.Move, Direction.Down),
+                ConsoleKey.A or ConsoleKey.LeftArrow => new Command(Core.Interfaces.CommandType.Move, Direction.Left),
+                ConsoleKey.D or ConsoleKey.RightArrow => new Command(Core.Interfaces.CommandType.Move, Direction.Right),
+                ConsoleKey.Spacebar => new Command(Core.Interfaces.CommandType.ToggleShields),
+                ConsoleKey.C => new Command(Core.Interfaces.CommandType.ViewCargo),
+                ConsoleKey.Escape => new Command(Core.Interfaces.CommandType.Exit),
                 _ => null
             };
         }
     }
 
-    public class Command : ICommand
+    internal class Command : ICommand
     {
-        public CommandType Type { get; }
+        public Core.Interfaces.CommandType Type { get; }
         public object? Data { get; }
 
-        public Command(CommandType type, object? data = null)
+        public Command(Core.Interfaces.CommandType type, object? data = null)
         {
             Type = type;
             Data = data;
