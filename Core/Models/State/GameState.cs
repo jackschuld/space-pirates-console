@@ -8,14 +8,17 @@ namespace SpacePirates.Console.Core.Models.State
     {
         public Ship PlayerShip { get; private set; } = null!;
         public Position MapSize { get; private set; } = null!;
-        private const int STATUS_AREA_HEIGHT = 6;
+        private const int HELP_AREA_HEIGHT = 3;
 
-        public GameState(int mapWidth = 80, int mapHeight = 24)
+        public GameState()
         {
-            // Adjust map height to account for status area
-            mapHeight = mapHeight - STATUS_AREA_HEIGHT;
+            // Use the precalculated usable game area dimensions
+            MapSize = new Position 
+            { 
+                X = ConsoleConfig.UsableGameWidth,
+                Y = ConsoleConfig.UsableGameHeight
+            };
             
-            MapSize = new Position { X = mapWidth - 2, Y = mapHeight - 2 }; // Account for borders
             InitializePlayerShip();
         }
 

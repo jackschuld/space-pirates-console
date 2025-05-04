@@ -19,7 +19,7 @@ namespace SpacePirates.Console.Game.Engine
 
         public void Initialize()
         {
-            _renderer.Initialize(120, 30); // Standard terminal size
+            _renderer.Initialize();  // Use ConsoleConfig values instead of hardcoded dimensions
             _gameState = new GameState(); // Initialize with default state
             _isRunning = true;
         }

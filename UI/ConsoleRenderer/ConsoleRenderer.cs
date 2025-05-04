@@ -1,4 +1,5 @@
 using SpacePirates.Console.Core.Interfaces;
+using SpacePirates.Console.Core.Models.State;
 using SpacePirates.Console.UI.Components;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -30,17 +31,17 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             _previousBuffer[0, 0] = new ConsoleBuffer();
         }
 
-        public void Initialize(int width, int height)
+        public void Initialize()
         {
-            _width = width;
-            _height = height;
+            _width = ConsoleConfig.DEFAULT_CONSOLE_WIDTH;
+            _height = ConsoleConfig.DEFAULT_CONSOLE_HEIGHT;
 
             // Initialize buffers
-            _currentBuffer = new ConsoleBuffer[width, height];
-            _previousBuffer = new ConsoleBuffer[width, height];
-            for (int y = 0; y < height; y++)
+            _currentBuffer = new ConsoleBuffer[_width, _height];
+            _previousBuffer = new ConsoleBuffer[_width, _height];
+            for (int y = 0; y < _height; y++)
             {
-                for (int x = 0; x < width; x++)
+                for (int x = 0; x < _width; x++)
                 {
                     _currentBuffer[x, y] = new ConsoleBuffer();
                     _previousBuffer[x, y] = new ConsoleBuffer();
@@ -54,21 +55,16 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                System.Console.WindowWidth = width;
-                System.Console.WindowHeight = height;
-                System.Console.BufferWidth = width;
-                System.Console.BufferHeight = height;
+                System.Console.WindowWidth = _width;
+                System.Console.WindowHeight = _height;
+                System.Console.BufferWidth = _width;
+                System.Console.BufferHeight = _height;
             }
 
-            // Initialize UI components with appropriate dimensions
-            int gameWidth = 80;  // Main game area width
-            int statusWidth = width - gameWidth - 1;  // Remaining width for status
-            int helpHeight = 3;  // Height for help section at bottom
-            int mainHeight = height - helpHeight;
-
-            _gameComponent = new GameViewComponent(0, 0, gameWidth, mainHeight);
-            _statusComponent = new StatusComponent(gameWidth + 1, 0, statusWidth, mainHeight);
-            _helpComponent = new HelpComponent(0, mainHeight, width, helpHeight);
+            // Initialize UI components using configuration values
+            _gameComponent = new GameViewComponent(0, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
+            _statusComponent = new StatusComponent(ConsoleConfig.GAME_AREA_WIDTH + 1, 0, ConsoleConfig.StatusAreaWidth, ConsoleConfig.MainAreaHeight);
+            _helpComponent = new HelpComponent(0, ConsoleConfig.MainAreaHeight, _width, ConsoleConfig.HELP_AREA_HEIGHT);
 
             _isInitialized = true;
             Clear();

@@ -5,7 +5,7 @@ namespace SpacePirates.Console.Core.Interfaces
     public interface IRenderer : IDisposable
     {
         // Core functionality
-        void Initialize(int width, int height);
+        void Initialize();
         void BeginFrame();
         void EndFrame();
         void Clear();
