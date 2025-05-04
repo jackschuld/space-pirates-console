@@ -67,8 +67,8 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             int mainHeight = height - helpHeight;
 
             _gameComponent = new GameViewComponent(0, 0, gameWidth, mainHeight);
-            // _statusComponent = new StatusComponent(gameWidth + 1, 0, statusWidth, mainHeight);
-            // _helpComponent = new HelpComponent(0, mainHeight, width, helpHeight);
+            _statusComponent = new StatusComponent(gameWidth + 1, 0, statusWidth, mainHeight);
+            _helpComponent = new HelpComponent(0, mainHeight, width, helpHeight);
 
             _isInitialized = true;
             Clear();

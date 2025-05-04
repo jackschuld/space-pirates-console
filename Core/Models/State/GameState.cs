@@ -8,15 +8,14 @@ namespace SpacePirates.Console.Core.Models.State
     {
         public Ship PlayerShip { get; private set; } = null!;
         public Position MapSize { get; private set; } = null!;
-        private const int HELP_AREA_HEIGHT = 3;  // Match the help section height from ConsoleRenderer
+        private const int STATUS_AREA_HEIGHT = 6;
 
         public GameState(int mapWidth = 80, int mapHeight = 24)
         {
-            // Adjust map height to account for help area at bottom
-            mapHeight = mapHeight - HELP_AREA_HEIGHT;
+            // Adjust map height to account for status area
+            mapHeight = mapHeight - STATUS_AREA_HEIGHT;
             
-            // Account for borders (subtract 2 from both dimensions)
-            MapSize = new Position { X = mapWidth - 2, Y = mapHeight - 2 };
+            MapSize = new Position { X = mapWidth - 2, Y = mapHeight - 2 }; // Account for borders
             InitializePlayerShip();
         }
 
