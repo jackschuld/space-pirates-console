@@ -46,28 +46,28 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             }
         }
 
-        public void DrawBox(int x, int y, int width, int height, BoxStyle style = BoxStyle.Single)
+        public void DrawBox(int x, int y, int width, int height, BoxStyle style = BoxStyle.Single, ConsoleColor? borderColor = null)
         {
             var chars = BoxChars[style];
 
             // Draw corners
-            DrawChar(x, y, chars.TopLeft);
-            DrawChar(x + width - 1, y, chars.TopRight);
-            DrawChar(x, y + height - 1, chars.BottomLeft);
-            DrawChar(x + width - 1, y + height - 1, chars.BottomRight);
+            DrawChar(x, y, chars.TopLeft, borderColor);
+            DrawChar(x + width - 1, y, chars.TopRight, borderColor);
+            DrawChar(x, y + height - 1, chars.BottomLeft, borderColor);
+            DrawChar(x + width - 1, y + height - 1, chars.BottomRight, borderColor);
 
             // Draw horizontal lines
             for (int i = 1; i < width - 1; i++)
             {
-                DrawChar(x + i, y, chars.Horizontal);
-                DrawChar(x + i, y + height - 1, chars.Horizontal);
+                DrawChar(x + i, y, chars.Horizontal, borderColor);
+                DrawChar(x + i, y + height - 1, chars.Horizontal, borderColor);
             }
 
             // Draw vertical lines
             for (int i = 1; i < height - 1; i++)
             {
-                DrawChar(x, y + i, chars.Vertical);
-                DrawChar(x + width - 1, y + i, chars.Vertical);
+                DrawChar(x, y + i, chars.Vertical, borderColor);
+                DrawChar(x + width - 1, y + i, chars.Vertical, borderColor);
             }
         }
 
@@ -85,6 +85,12 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         public bool IsInBounds(int x, int y)
         {
             return x >= 0 && x < _width && y >= 0 && y < _height;
+        }
+
+        // Overload to satisfy IBufferWriter interface
+        public void DrawBox(int x, int y, int width, int height, BoxStyle style)
+        {
+            DrawBox(x, y, width, height, style, null);
         }
     }
 } 

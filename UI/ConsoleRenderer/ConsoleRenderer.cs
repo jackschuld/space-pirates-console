@@ -111,20 +111,24 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             }
             _commandComponent?.Render(commandBuffer);
 
-            // Draw X axis numbers (1, 12, ..., 75) below the game area
-            int numbersY = ConsoleConfig.XAxisLabelRow;
-            int gameViewX = _gameComponent != null ? _gameComponent.Bounds.X : 0;
-            int xStart = gameViewX + 1; // After left border of game area
-            int[] xLabels = { 1, 12, 23, 34, 45, 56, 67, 75 };
-            foreach (int x in xLabels)
+            // Draw X axis numbers below the game area
+            if (_gameComponent != null)
             {
-                int drawX = xStart + x - 1;
-                string label = x.ToString();
-                for (int j = 0; j < label.Length; j++)
+                int numbersY = ConsoleConfig.XAxisLabelRow;
+                int xStart = _gameComponent.LeftBorderX;
+                int maxX = _gameComponent.UsableWidth;
+                int labelCount = 8; // Number of labels to show (including 1 and max)
+                int[] xLabels = { 1, 12, 23, 34, 45, 56, 67, 75 };
+                foreach (int x in xLabels)
                 {
-                    _currentBuffer[drawX + j, numbersY].Character = label[j];
-                    _currentBuffer[drawX + j, numbersY].Foreground = ConsoleColor.DarkYellow;
-                    _currentBuffer[drawX + j, numbersY].IsDirty = true;
+                    int drawX = xStart + x - 1;
+                    string label = x.ToString();
+                    for (int j = 0; j < label.Length; j++)
+                    {
+                        _currentBuffer[drawX + j, numbersY].Character = label[j];
+                        _currentBuffer[drawX + j, numbersY].Foreground = ConsoleColor.White;
+                        _currentBuffer[drawX + j, numbersY].IsDirty = true;
+                    }
                 }
             }
 

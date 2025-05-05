@@ -1,3 +1,9 @@
+C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.csproj.AssemblyReference.cache
+C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.AssemblyInfoInputs.cache
+C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.AssemblyInfo.cs
+C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.csproj.CoreCompileInputs.cache
+C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.sourcelink.json
 C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\SpacePirates.API.deps.json
 C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\SpacePirates.API.runtimeconfig.json
 C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\appsettings.Development.json
@@ -26,12 +32,6 @@ C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\Swashbuckle.AspNet
 C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
 C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\SpacePirates.API.dll
 C:\Users\johns\Projects\SpacePirates.Console\bin\Debug\net8.0\SpacePirates.API.pdb
-C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.csproj.AssemblyReference.cache
-C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.AssemblyInfoInputs.cache
-C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.AssemblyInfo.cs
-C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.csproj.CoreCompileInputs.cache
-C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.sourcelink.json
 C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePir.974D7810.Up2Date
 C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\SpacePirates.Console.dll
 C:\Users\johns\Projects\SpacePirates.Console\obj\Debug\net8.0\refint\SpacePirates.Console.dll

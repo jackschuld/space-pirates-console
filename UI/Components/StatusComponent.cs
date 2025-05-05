@@ -104,8 +104,9 @@ namespace SpacePirates.Console.UI.Components
         };
         public static readonly (string Key, string Description)[] QuickKeys = new[]
         {
-            ("ESC", "Quit game"),
-            ("Tab", "Toggle this panel (Status/Instructions)")
+            ("c", "Enter command mode"),
+            ("Tab", "Toggle this panel (Status/Instructions)"),
+            ("ESC", "Quit game")
         };
         public const string Header = "INSTRUCTIONS";
     }
@@ -186,8 +187,11 @@ namespace SpacePirates.Console.UI.Components
     {
         public static void DrawPanelFrameWithTab(IBufferWriter buffer, int x, int y, int width, int height, string title, ConsoleColor titleColor)
         {
-            // Draw border
-            buffer.DrawBox(x, y, width, height, BoxStyle.Double);
+            // Draw border in gold/darkyellow if possible
+            if (buffer is SpacePirates.Console.UI.ConsoleRenderer.ConsoleBufferWriter cbw)
+                cbw.DrawBox(x, y, width, height, BoxStyle.Double, PanelStyles.BorderColor);
+            else
+                buffer.DrawBox(x, y, width, height, BoxStyle.Double);
             // Draw title in all caps at top left
             string titleText = title.ToUpperInvariant();
             buffer.DrawString(x + 2, y + 1, titleText, titleColor);
@@ -203,7 +207,8 @@ namespace SpacePirates.Console.UI.Components
 
     public static class PanelStyles
     {
-        public const ConsoleColor TitleColor = ConsoleColor.DarkYellow; // gold/orange
+        public const ConsoleColor BorderColor = ConsoleColor.DarkYellow; 
+        public const ConsoleColor TitleColor = ConsoleColor.White;
         public const ConsoleColor SubtitleColor = ConsoleColor.Yellow;
         public const ConsoleColor FadedColor = ConsoleColor.DarkGray;
     }

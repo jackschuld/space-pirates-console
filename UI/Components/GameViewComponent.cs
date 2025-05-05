@@ -1,6 +1,7 @@
 using SpacePirates.Console.Core.Interfaces;
 using SpacePirates.API.Models;
 using SpacePirates.Console.Core.Models.State;
+using SpacePirates.Console.UI.Components; // For PanelStyles
 
 namespace SpacePirates.Console.UI.Components
 {
@@ -21,6 +22,11 @@ namespace SpacePirates.Console.UI.Components
         }
 
         public (int X, int Y, int Width, int Height) Bounds => _bounds;
+
+        // Expose usable area and left border for modular rendering
+        public int UsableWidth => _usableWidth;
+        public int UsableHeight => _usableHeight;
+        public int LeftBorderX => _bounds.X + 1; // First usable X after left border
 
         public void HandleInput(ConsoleKeyInfo keyInfo)
         {
@@ -57,8 +63,11 @@ namespace SpacePirates.Console.UI.Components
             // Clear the game area
             buffer.Clear(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height);
 
-            // Draw game border
-            buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Double);
+            // Draw game border in dark yellow if possible
+            if (buffer is SpacePirates.Console.UI.ConsoleRenderer.ConsoleBufferWriter cbw)
+                cbw.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Double, PanelStyles.BorderColor);
+            else
+                buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Double);
 
             // Draw selected capital letters vertically along the right side of the game area
             int[] letterIndices = { 0, 5, 10, 15, 20, 25 }; // A, F, K, P, U, Z
@@ -71,7 +80,7 @@ namespace SpacePirates.Console.UI.Components
                 char letter = (char)('A' + letterIndex);
                 // Evenly space the letters from top to bottom
                 int y = lettersStartY + (int)Math.Round(i * (letterAreaHeight - 1) / (double)(letterIndices.Length - 1));
-                buffer.DrawString(lettersX, y, " " + letter.ToString(), ConsoleColor.DarkYellow);
+                buffer.DrawString(lettersX, y, " " + letter.ToString(), ConsoleColor.White);
             }
 
             if (_gameState?.PlayerShip == null) return;
