@@ -49,8 +49,7 @@ namespace SpacePirates.Console.Core.Models.State
                 },
                 FuelSystem = new FuelSystem 
                 { 
-                    CurrentLevel = 1,
-                    CurrentFuel = 100
+                    CurrentLevel = 1
                 },
                 CargoSystem = new CargoSystem 
                 { 

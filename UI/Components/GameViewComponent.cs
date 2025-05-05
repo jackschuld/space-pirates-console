@@ -115,6 +115,35 @@ namespace SpacePirates.Console.UI.Components
             int shipX = _bounds.X + (int)ship.Position.X;
             int shipY = _bounds.Y + (int)ship.Position.Y;
 
+            // Draw pulsing shield if active or charging
+            if (ship.Shield != null && (ship.Shield.IsActive || ship.Shield.Charging))
+            {
+                // Pulse color based on time/frame
+                int pulse = (int)((DateTime.UtcNow.Millisecond / 1000.0) * 10) % 2;
+                ConsoleColor shieldColor = pulse == 0 ? ConsoleColor.Cyan : ConsoleColor.Blue;
+                // Draw an oval ring around the ship (radiusX=2, radiusY=1)
+                int radiusX = 2;
+                int radiusY = 1;
+                for (int dx = -radiusX; dx <= radiusX; dx++)
+                {
+                    for (int dy = -radiusY; dy <= radiusY; dy++)
+                    {
+                        if (dx == 0 && dy == 0) continue; // skip center
+                        double dist = Math.Pow(dx / (double)radiusX, 2) + Math.Pow(dy / (double)radiusY, 2);
+                        if (dist >= 0.8 && dist <= 1.4)
+                        {
+                            int sx = shipX + dx;
+                            int sy = shipY + dy;
+                            // Only draw if inside the usable area (inside border)
+                            if (sx > _bounds.X && sx < _bounds.X + _bounds.Width - 1 && sy > _bounds.Y && sy < _bounds.Y + _bounds.Height - 1)
+                            {
+                                buffer.DrawChar(sx, sy, 'o', shieldColor);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Draw ship with shield status
             char shipChar = ship.Shield?.IsActive == true ? '⊡' : '□';
             ConsoleColor shipColor = ship.Shield?.IsActive == true ? ConsoleColor.Cyan : ConsoleColor.White;

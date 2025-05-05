@@ -12,6 +12,9 @@ namespace SpacePirates.Console.Core.Models.Movement
         private double _velocityX;
         private double _velocityY;
         
+        // Modular constant for base fuel cost per move (tune for balance)
+        public const double BaseFuelCostPerStep = 1.0;
+        
         public void ApplyThrust(Position position, double thrust, Direction direction)
         {
             switch (direction)
@@ -83,7 +86,13 @@ namespace SpacePirates.Console.Core.Models.Movement
             double effectiveSpeed = baseSpeed * cargoPenalty * fuelEfficiency;
             effectiveSpeed = Math.Max(0.5, effectiveSpeed); // Clamp to minimum speed (0.5 units/sec)
 
-            double fuelCostPerStep = (1.0 / fuelEfficiency) / 4.0;
+            // Modular, tunable fuel cost per move: higher efficiency = less fuel used
+            double fuelCostPerStep = BaseFuelCostPerStep / fuelEfficiency;
+            // If shield is active or charging, increase fuel use by 5%
+            if (ship.Shield != null && (ship.Shield.IsActive || ship.Shield.Charging))
+            {
+                fuelCostPerStep *= 1.05;
+            }
 
             int dx = targetX - startX;
             int dy = targetY - startY;
@@ -125,13 +134,13 @@ namespace SpacePirates.Console.Core.Models.Movement
 
                 ship.Position.X = curX;
                 ship.Position.Y = curY;
-                ship.FuelSystem.CurrentFuel -= (int)Math.Ceiling(fuelCostPerStep);
+                ship.FuelSystem.CurrentFuel -= fuelCostPerStep;
                 if (ship.FuelSystem.CurrentFuel < 0) ship.FuelSystem.CurrentFuel = 0;
 
                 // Update trail
                 trail?.AddPoint(curX, curY);
 
-                onMessage?.Invoke($"[Step {step}] Ship at ({curX}, {curY}), Target: ({targetX}, {targetY}), Fuel: {ship.FuelSystem.CurrentFuel}");
+                onMessage?.Invoke($"[Step {step}] Ship at ({curX}, {curY}), Target: ({targetX}, {targetY}), Fuel: {ship.FuelSystem.CurrentFuel:F2}");
                 onStep?.Invoke();
 
                 int msDelay = (int)(2000.0 - (effectiveSpeed * 500.0));

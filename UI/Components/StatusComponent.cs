@@ -44,31 +44,40 @@ namespace SpacePirates.Console.UI.Components
 
             // HULL
             var hullPercentage = (ship.Hull.CurrentIntegrity / (float)ship.Hull.CalculateMaxCapacity()) * 100;
-            buffer.DrawString(textX, y, $"Hull: {hullPercentage:F1}%", ConsoleColor.DarkGreen);
-            buffer.DrawString(textX + 20, y++, $"--level:{ship.Hull.CurrentLevel}", PanelStyles.FadedColor);
+            string hullBar = StatusComponentHelpers.RenderBar(hullPercentage, 12, '■', ' ');
+            buffer.DrawString(textX, y++, $"Hull:   {hullBar}", ConsoleColor.DarkGreen);
 
             // SHIELD
             if (ship.Shield != null)
             {
                 var shieldPercentage = (ship.Shield.CurrentIntegrity / (float)ship.Shield.CalculateMaxCapacity()) * 100;
-                buffer.DrawString(textX, y, $"Shield: {shieldPercentage:F1}%", ConsoleColor.DarkCyan);
-                buffer.DrawString(textX + 20, y++, $"--level:{ship.Shield.CurrentLevel}", PanelStyles.FadedColor);
+                int barWidth = 12;
+                string bar = StatusComponentHelpers.RenderBar(ship.Shield.IsActive || ship.Shield.Charging ? shieldPercentage : 0, barWidth, '■', ' ');
+                if (ship.Shield.IsActive || ship.Shield.Charging)
+                    buffer.DrawString(textX, y++, $"Shield: {bar}", ConsoleColor.DarkCyan);
+                else
+                    buffer.DrawString(textX, y++, $"Shield: {bar}", ConsoleColor.DarkGray);
             }
 
             // CARGO
             if (ship.CargoSystem != null)
             {
                 var cargoPercentage = (ship.CargoSystem.CurrentLoad / (float)ship.CargoSystem.CalculateMaxCapacity()) * 100;
-                buffer.DrawString(textX, y, $"Cargo: {cargoPercentage:F1}%", ConsoleColor.DarkYellow);
-                buffer.DrawString(textX + 20, y++, $"--level:{ship.CargoSystem.CurrentLevel}", PanelStyles.FadedColor);
+                string cargoBar = StatusComponentHelpers.RenderBar(cargoPercentage, 12, '■', ' ');
+                buffer.DrawString(textX, y++, $"Cargo:  {cargoBar}", ConsoleColor.DarkYellow);
             }
             
             // FUEL
             if (ship.FuelSystem != null)
             {
-                var fuelPercentage = (ship.FuelSystem.CurrentLevel / (float)ship.FuelSystem.CalculateMaxCapacity()) * 100;
-                buffer.DrawString(textX, y, $"Fuel: {fuelPercentage:F1}%", ConsoleColor.Red);
-                buffer.DrawString(textX + 20, y++, $"--level:{ship.FuelSystem.CurrentLevel}", PanelStyles.FadedColor);
+                var fuelPercentage = (ship.FuelSystem.CurrentFuel / ship.FuelSystem.CalculateMaxCapacity()) * 100.0;
+                string fuelBar = StatusComponentHelpers.RenderBar(fuelPercentage, 12, '■', ' ');
+                string fuelLine = $"Fuel:   {fuelBar}";
+                if (ship.Shield != null && (ship.Shield.IsActive || ship.Shield.Charging))
+                    fuelLine += "  ";
+                buffer.DrawString(textX, y++, fuelLine, ConsoleColor.Red);
+                if (ship.Shield != null && (ship.Shield.IsActive || ship.Shield.Charging))
+                    buffer.DrawString(textX + fuelLine.Length + 1, y - 1, "-5%", ConsoleColor.Blue);
             }
 
             // Divider before weapons
@@ -78,10 +87,12 @@ namespace SpacePirates.Console.UI.Components
             if (ship.WeaponSystem != null)
             {
                 buffer.DrawString(textX, y++, "WEAPONS:", PanelStyles.SubtitleColor);
-                buffer.DrawString(textX, y, $"Damage: {ship.WeaponSystem.Damage:F0}", ConsoleColor.DarkRed);
-                buffer.DrawString(textX + 20, y++, $"--level:{ship.WeaponSystem.CurrentLevel}", PanelStyles.FadedColor);
-                buffer.DrawString(textX, y++, $"Accuracy: {ship.WeaponSystem.Accuracy:P0}", ConsoleColor.DarkCyan);
-                buffer.DrawString(textX, y++, $"Crit: {ship.WeaponSystem.CriticalChance:P0}", ConsoleColor.Magenta);
+                // Damage as a bar (assuming max 100 for bar)
+                double damagePercent = Math.Min(100.0, (ship.WeaponSystem.Damage / 100.0) * 100.0);
+                string damageBar = StatusComponentHelpers.RenderBar(damagePercent, 12, '■', ' ');
+                buffer.DrawString(textX, y++, $"Damage: {damageBar}", ConsoleColor.DarkRed);
+                buffer.DrawString(textX, y++, $"Accuracy: ", ConsoleColor.DarkCyan);
+                buffer.DrawString(textX, y++, $"Crit: ", ConsoleColor.Magenta);
             }
         }
 
@@ -211,5 +222,15 @@ namespace SpacePirates.Console.UI.Components
         public const ConsoleColor TitleColor = ConsoleColor.White;
         public const ConsoleColor SubtitleColor = ConsoleColor.Yellow;
         public const ConsoleColor FadedColor = ConsoleColor.DarkGray;
+    }
+
+    public static class StatusComponentHelpers
+    {
+        public static string RenderBar(double percent, int width, char fillChar, char emptyChar)
+        {
+            int filled = (int)(width * (percent / 100.0));
+            filled = Math.Clamp(filled, 0, width);
+            return "[" + new string(fillChar, filled) + new string(emptyChar, width - filled) + "]";
+        }
     }
 } 

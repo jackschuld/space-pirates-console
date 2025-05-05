@@ -32,6 +32,8 @@ namespace SpacePirates.Console.Game.Engine
         private DateTime _lastCursorBlink = DateTime.Now;
         private readonly TimeSpan _cursorBlinkInterval = TimeSpan.FromMilliseconds(500);
         private ShipTrail _shipTrail = new ShipTrail(12);
+        private DateTime _lastShieldChargeUpdate = DateTime.UtcNow;
+        private double _shieldChargeProgress = 0;
         public bool ShowInstructionsPanel => _showInstructionsPanel;
 
         public GameEngine(IRenderer renderer)
@@ -204,11 +206,71 @@ namespace SpacePirates.Console.Game.Engine
                 _renderer.EndFrame(); // Restore help text in UI
                 return;
             }
+
+            // Shield activation: 's' to start charging if off, or turn off if on
+            if (key.Key == ConsoleKey.S && _gameState?.PlayerShip?.Shield != null)
+            {
+                var shield = _gameState.PlayerShip.Shield;
+                if (!shield.IsActive && !shield.Charging)
+                {
+                    shield.Charging = true;
+                    shield.CurrentIntegrity = 0;
+                    _lastShieldChargeUpdate = DateTime.UtcNow;
+                    _shieldChargeProgress = 0;
+                    _renderer.SetHelpText("Shield charging...");
+                }
+                else if (shield.IsActive && !shield.Charging)
+                {
+                    shield.IsActive = false;
+                    shield.CurrentIntegrity = 0;
+                    _renderer.SetHelpText("Turning shields off...");
+                    // Hide message after 2.5s
+                    var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
+                    while (DateTime.Now < restoreTime)
+                    {
+                        Thread.Sleep(50);
+                        if (System.Console.KeyAvailable) break;
+                    }
+                    _renderer.SetHelpText(_defaultHelpText);
+                }
+                return;
+            }
         }
 
         private void Update()
         {
             if (_gameState == null) return;
+
+            // Shield charging logic
+            var ship = _gameState.PlayerShip;
+            if (ship?.Shield != null && ship.Shield.Charging)
+            {
+                var now = DateTime.UtcNow;
+                double seconds = (now - _lastShieldChargeUpdate).TotalSeconds;
+                _lastShieldChargeUpdate = now;
+                // Charge up shield: 100% in 15 seconds, 1% per 0.15s
+                int maxCapacity = ship.Shield.CalculateMaxCapacity();
+                double percentPerSecond = 100.0 / 15.0;
+                _shieldChargeProgress += percentPerSecond * seconds;
+                int newPercent = (int)_shieldChargeProgress;
+                newPercent = Math.Clamp(newPercent, 0, 100);
+                ship.Shield.CurrentIntegrity = (int)(maxCapacity * (newPercent / 100.0));
+                if (newPercent >= 100)
+                {
+                    ship.Shield.CurrentIntegrity = maxCapacity;
+                    ship.Shield.IsActive = true;
+                    ship.Shield.Charging = false;
+                    _renderer.SetHelpText("Shield fully charged!");
+                    // Hide message after 2.5s
+                    var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
+                    while (DateTime.Now < restoreTime)
+                    {
+                        Thread.Sleep(50);
+                        if (System.Console.KeyAvailable) break;
+                    }
+                    _renderer.SetHelpText(_defaultHelpText);
+                }
+            }
 
             // Update game state
             _gameState.Update();
