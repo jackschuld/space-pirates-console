@@ -3,6 +3,7 @@ using SpacePirates.Console.Core.Models.Movement;
 using SpacePirates.Console.Core.Models.State;
 using SpacePirates.API.Models;
 using SpacePirates.Console.UI.InputHandling.CommandSystem;
+using SpacePirates.Console.UI.ConsoleRenderer;
 using System.Text;
 
 namespace SpacePirates.Console.Game.Engine
@@ -14,8 +15,18 @@ namespace SpacePirates.Console.Game.Engine
         private bool _isRunning;
         private CommandParser? _commandParser;
         private MoveCommand? _moveCommand;
-        private string _defaultHelpText = "Type ':' to enter command mode | ESC to exit";
+        private string _defaultHelpText = "Type 'c' to enter command mode | ESC to exit";
         private string _lastCommandResult = string.Empty;
+        private bool _showInstructions = false;
+        private readonly string _instructionsText =
+            "COMMANDS:\n" +
+            MoveCommand.Description + "\n" +
+            "c esc - Quit game\n" +
+            "Tab - Show/hide instructions\n";
+        private bool _showQuitConfirm = false;
+        private bool _wasShowingInstructions = false;
+        private bool _showInstructionsPanel = false;
+        public bool ShowInstructionsPanel => _showInstructionsPanel;
 
         public GameEngine(IRenderer renderer)
         {
@@ -54,17 +65,70 @@ namespace SpacePirates.Console.Game.Engine
             if (!System.Console.KeyAvailable) return;
             var key = System.Console.ReadKey(true);
 
-            if (key.KeyChar == ':')
+            // If showing quit confirmation, only accept y/n
+            if (_showQuitConfirm)
             {
-                var commandBuffer = new StringBuilder(":");
-                _renderer.SetHelpText(commandBuffer.ToString());
+                if (key.Key == ConsoleKey.Y)
+                {
+                    _isRunning = false;
+                }
+                else if (key.Key == ConsoleKey.N)
+                {
+                    _showQuitConfirm = false;
+                    // Restore previous screen (instructions or normal)
+                    if (_wasShowingInstructions)
+                    {
+                        _renderer.SetHelpText(_instructionsText);
+                    }
+                    else
+                    {
+                        _renderer.SetHelpText(_defaultHelpText);
+                    }
+                    if (_renderer is ConsoleRenderer cr1)
+                        cr1.ShowInstructionsPanel = _showInstructionsPanel;
+                    _renderer.EndFrame();
+                }
+                // Ignore all other input while confirmation is shown
+                return;
+            }
+
+            // Quick key: ESC to quit (show confirmation)
+            if (key.Key == ConsoleKey.Escape)
+            {
+                _showQuitConfirm = true;
+                _wasShowingInstructions = _showInstructions;
+                _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
+                _renderer.EndFrame();
+                return;
+            }
+
+            // Quick key: Tab to toggle instructions panel
+            if (key.Key == ConsoleKey.Tab)
+            {
+                _showInstructionsPanel = !_showInstructionsPanel;
+                if (_renderer is ConsoleRenderer cr2)
+                    cr2.ShowInstructionsPanel = _showInstructionsPanel;
+                _renderer.EndFrame();
+                return;
+            }
+
+            if (_showInstructions)
+            {
+                // Ignore all other input while instructions are shown
+                return;
+            }
+
+            if (key.KeyChar == 'c' || key.KeyChar == 'C')
+            {
+                var commandBuffer = new StringBuilder("");
+                _renderer.SetHelpText(""); // Clear help text for command entry
                 _renderer.EndFrame(); // Force UI update
 
                 while (true)
                 {
                     var cmdKey = System.Console.ReadKey(true);
                     if (cmdKey.Key == ConsoleKey.Enter) break;
-                    if (cmdKey.Key == ConsoleKey.Backspace && commandBuffer.Length > 1)
+                    if (cmdKey.Key == ConsoleKey.Backspace && commandBuffer.Length > 0)
                     {
                         commandBuffer.Length--;
                     }
@@ -76,8 +140,8 @@ namespace SpacePirates.Console.Game.Engine
                     _renderer.EndFrame(); // Force UI update after each key
                 }
 
-                var commandInput = commandBuffer.ToString().Substring(1); // Remove initial ':'
-                var result = _commandParser?.ParseAndExecuteWithResult(":" + commandInput);
+                var commandInput = commandBuffer.ToString();
+                var result = _commandParser?.ParseAndExecuteWithResult(commandInput);
                 if (!string.IsNullOrWhiteSpace(result))
                 {
                     _renderer.SetHelpText(result);
@@ -86,14 +150,11 @@ namespace SpacePirates.Console.Game.Engine
                 {
                     _renderer.SetHelpText(_defaultHelpText);
                 }
+                if (_renderer is ConsoleRenderer cr3)
+                    cr3.ShowInstructionsPanel = _showInstructionsPanel;
                 _renderer.EndFrame(); // Restore help text in UI
                 return;
             }
-            else if (key.Key == ConsoleKey.Escape)
-            {
-                _isRunning = false;
-            }
-            // Remove all other movement logic (WASD, arrows, etc.)
         }
 
         private void Update()

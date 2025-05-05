@@ -18,8 +18,10 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         // UI Components
         private GameViewComponent? _gameComponent;
         private StatusComponent? _statusComponent;
-        private HelpComponent? _helpComponent;
+        private CommandComponent? _commandComponent;
         private IGameState? _currentGameState;
+
+        public bool ShowInstructionsPanel { get; set; } = false;
 
         public ConsoleRenderer()
         {
@@ -61,10 +63,13 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
                 System.Console.BufferHeight = _height;
             }
 
-            // Initialize UI components using configuration values
-            _gameComponent = new GameViewComponent(0, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
-            _statusComponent = new StatusComponent(ConsoleConfig.GAME_AREA_WIDTH + 1, 0, ConsoleConfig.StatusAreaWidth, ConsoleConfig.MainAreaHeight);
-            _helpComponent = new HelpComponent(0, ConsoleConfig.MainAreaHeight, _width, ConsoleConfig.HELP_AREA_HEIGHT);
+            // Switch: status panel on the left, game view on the right
+            int statusWidth = ConsoleConfig.StatusAreaWidth;
+            int statusX = 0;
+            int gameViewX = statusWidth; // No extra spacing
+            _statusComponent = new StatusComponent(statusX, 0, statusWidth, ConsoleConfig.MainAreaHeight);
+            _gameComponent = new GameViewComponent(gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
+            _commandComponent = new CommandComponent(0, ConsoleConfig.MainAreaHeight, _width, ConsoleConfig.HELP_AREA_HEIGHT);
 
             _isInitialized = true;
             Clear();
@@ -91,12 +96,37 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             // Create buffer writers for each component
             var gameBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
             var statusBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
-            var helpBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
+            var commandBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
 
             // Render all components
             _gameComponent?.Render(gameBuffer);
-            _statusComponent?.Render(statusBuffer);
-            _helpComponent?.Render(helpBuffer);
+            if (ShowInstructionsPanel)
+            {
+                var instructionsPanel = new InstructionsPanelComponent(_statusComponent.Bounds.X, _statusComponent.Bounds.Y, _statusComponent.Bounds.Width, _statusComponent.Bounds.Height);
+                instructionsPanel.Render(statusBuffer);
+            }
+            else
+            {
+                _statusComponent?.Render(statusBuffer);
+            }
+            _commandComponent?.Render(commandBuffer);
+
+            // Draw X axis numbers (1, 12, ..., 75) below the game area
+            int numbersY = ConsoleConfig.XAxisLabelRow;
+            int gameViewX = _gameComponent != null ? _gameComponent.Bounds.X : 0;
+            int xStart = gameViewX + 1; // After left border of game area
+            int[] xLabels = { 1, 12, 23, 34, 45, 56, 67, 75 };
+            foreach (int x in xLabels)
+            {
+                int drawX = xStart + x - 1;
+                string label = x.ToString();
+                for (int j = 0; j < label.Length; j++)
+                {
+                    _currentBuffer[drawX + j, numbersY].Character = label[j];
+                    _currentBuffer[drawX + j, numbersY].Foreground = ConsoleColor.DarkYellow;
+                    _currentBuffer[drawX + j, numbersY].IsDirty = true;
+                }
+            }
 
             // Write changes to console
             var sb = new StringBuilder();
@@ -179,7 +209,7 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
 
         public void SetHelpText(string text)
         {
-            _helpComponent?.SetHelpText(text);
+            _commandComponent?.SetHelpText(text);
         }
 
         private static int GetColorCode(ConsoleColor color)

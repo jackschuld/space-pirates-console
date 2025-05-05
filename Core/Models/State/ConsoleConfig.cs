@@ -9,15 +9,17 @@ namespace SpacePirates.Console.Core.Models.State
         public const int DEFAULT_CONSOLE_HEIGHT = 30;  // Standard height
 
         // Layout configuration
-        public const int GAME_AREA_WIDTH = 80;  // Main game view width
-        public const int HELP_AREA_HEIGHT = 3;  // Height of help section at bottom
+        public const int GAME_AREA_WIDTH = 76;  // Main game view width for 1-75
+        public const int HELP_AREA_HEIGHT = 2;  // Height of help section at bottom
         
         // Calculated values
-        public static int StatusAreaWidth => DEFAULT_CONSOLE_WIDTH - GAME_AREA_WIDTH - 1;  // -1 for separator
+        public static int StatusAreaWidth => DEFAULT_CONSOLE_WIDTH - GAME_AREA_WIDTH - 2;
         public static int MainAreaHeight => DEFAULT_CONSOLE_HEIGHT - HELP_AREA_HEIGHT;
         
         // Usable game area (accounting for borders)
-        public static int UsableGameWidth => GAME_AREA_WIDTH - 2;  // -2 for left and right borders
+        public static int UsableGameWidth => GAME_AREA_WIDTH - 2;  // -2 for left and right borders (1-75)
         public static int UsableGameHeight => MainAreaHeight - 2;  // -2 for top and bottom borders
+
+        public static int XAxisLabelRow => MainAreaHeight; // Row just below the game area
     }
 } 

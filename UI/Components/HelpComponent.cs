@@ -3,12 +3,12 @@ using SpacePirates.API.Models;
 
 namespace SpacePirates.Console.UI.Components
 {
-    public class HelpComponent : IHelpComponent
+    public class CommandComponent : IHelpComponent
     {
         private readonly (int X, int Y, int Width, int Height) _bounds;
-        private string _helpText = "Type ':' to enter command mode | Type 'i' for instructions | ESC to exit";
+        private string _helpText = "Type 'c' to enter command mode | ESC to exit";
 
-        public HelpComponent(int x, int y, int width, int height)
+        public CommandComponent(int x, int y, int width, int height)
         {
             _bounds = (x, y, width, height);
         }
@@ -20,21 +20,20 @@ namespace SpacePirates.Console.UI.Components
             // Clear help area
             buffer.Clear(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height);
 
-            // Draw help border
-            buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Rounded);
+            // No border for command area
 
-            // Center the help text
+            // Center the command/help text
             if (!string.IsNullOrEmpty(_helpText))
             {
                 int textX = _bounds.X + (_bounds.Width - _helpText.Length) / 2;
                 int textY = _bounds.Y + _bounds.Height / 2;
-                buffer.DrawString(textX, textY, _helpText, ConsoleColor.Gray);
+                buffer.DrawString(textX, textY, _helpText, ConsoleColor.DarkGreen);
             }
         }
 
         public void Update(IGameState gameState)
         {
-            // Help component doesn't need game state updates
+            // Command component doesn't need game state updates
         }
 
         public void SetHelpText(string text)

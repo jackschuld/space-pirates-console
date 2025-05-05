@@ -1,5 +1,6 @@
 using SpacePirates.Console.Core.Interfaces;
 using SpacePirates.API.Models;
+using SpacePirates.Console.Core.Models.State;
 
 namespace SpacePirates.Console.UI.Components
 {
@@ -40,7 +41,7 @@ namespace SpacePirates.Console.UI.Components
                     if (ship.Position.X > 1) ship.Position.X -= 1;
                     break;
                 case ConsoleKey.RightArrow:
-                    if (ship.Position.X < mapSize.X) ship.Position.X += 1;
+                    if (ship.Position.X < 75) ship.Position.X += 1;
                     break;
                 case ConsoleKey.Spacebar:
                     if (ship.Shield != null)
@@ -58,6 +59,20 @@ namespace SpacePirates.Console.UI.Components
 
             // Draw game border
             buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Double);
+
+            // Draw selected capital letters vertically along the right side of the game area
+            int[] letterIndices = { 0, 5, 10, 15, 20, 25 }; // A, F, K, P, U, Z
+            int lettersX = _bounds.X + _bounds.Width; // Just outside the right border
+            int lettersStartY = _bounds.Y + 1; // Start just below the top border
+            int letterAreaHeight = _usableHeight;
+            for (int i = 0; i < letterIndices.Length; i++)
+            {
+                int letterIndex = letterIndices[i];
+                char letter = (char)('A' + letterIndex);
+                // Evenly space the letters from top to bottom
+                int y = lettersStartY + (int)Math.Round(i * (letterAreaHeight - 1) / (double)(letterIndices.Length - 1));
+                buffer.DrawString(lettersX, y, " " + letter.ToString(), ConsoleColor.DarkYellow);
+            }
 
             if (_gameState?.PlayerShip == null) return;
 
