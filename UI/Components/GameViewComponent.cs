@@ -2,6 +2,7 @@ using SpacePirates.Console.Core.Interfaces;
 using SpacePirates.API.Models;
 using SpacePirates.Console.Core.Models.State;
 using SpacePirates.Console.UI.Components; // For PanelStyles
+using SpacePirates.Console.Core.Models.Movement;
 
 namespace SpacePirates.Console.UI.Components
 {
@@ -12,6 +13,8 @@ namespace SpacePirates.Console.UI.Components
         // Store the usable area dimensions (excluding borders)
         private readonly int _usableWidth;
         private readonly int _usableHeight;
+        private ShipTrail? _shipTrail;
+        public ShipTrail? ShipTrail { get => _shipTrail; set => _shipTrail = value; }
 
         public GameViewComponent(int x, int y, int width, int height)
         {
@@ -86,7 +89,28 @@ namespace SpacePirates.Console.UI.Components
             if (_gameState?.PlayerShip == null) return;
 
             var ship = _gameState.PlayerShip;
-            
+
+            // Draw ship trail (fading)
+            if (_shipTrail != null)
+            {
+                var trail = _shipTrail.GetTrail();
+                int n = trail.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    var (tx, ty) = trail[i];
+                    int drawX = _bounds.X + tx;
+                    int drawY = _bounds.Y + ty;
+                    // Fade: oldest is darkest, newest is lightest
+                    ConsoleColor color = i switch {
+                        int idx when idx < n / 4 => ConsoleColor.DarkGray,
+                        int idx when idx < n / 2 => ConsoleColor.Gray,
+                        int idx when idx < 3 * n / 4 => ConsoleColor.White,
+                        _ => ConsoleColor.Yellow
+                    };
+                    buffer.DrawChar(drawX, drawY, '·', color);
+                }
+            }
+
             // Calculate ship position (add border offset)
             int shipX = _bounds.X + (int)ship.Position.X;
             int shipY = _bounds.Y + (int)ship.Position.Y;

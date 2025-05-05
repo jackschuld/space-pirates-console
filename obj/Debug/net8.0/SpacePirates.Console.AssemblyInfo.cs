@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SpacePirates.Console")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6f486f86680fcdef90e5fb79a6ebd68afcfcf591")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a645c9b281182aa2aa104d88198c28050a4fdf8a")]
 [assembly: System.Reflection.AssemblyProductAttribute("SpacePirates.Console")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SpacePirates.Console")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

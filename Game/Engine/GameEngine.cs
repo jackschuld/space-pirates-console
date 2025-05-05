@@ -26,6 +26,12 @@ namespace SpacePirates.Console.Game.Engine
         private bool _showQuitConfirm = false;
         private bool _wasShowingInstructions = false;
         private bool _showInstructionsPanel = false;
+        private bool _isCommandMode = false;
+        private string _commandInput = string.Empty;
+        private bool _showCursor = true;
+        private DateTime _lastCursorBlink = DateTime.Now;
+        private readonly TimeSpan _cursorBlinkInterval = TimeSpan.FromMilliseconds(500);
+        private ShipTrail _shipTrail = new ShipTrail(12);
         public bool ShowInstructionsPanel => _showInstructionsPanel;
 
         public GameEngine(IRenderer renderer)
@@ -47,6 +53,12 @@ namespace SpacePirates.Console.Game.Engine
 
             // Set initial help text
             _renderer.SetHelpText(_defaultHelpText);
+
+            // Pass trail to GameViewComponent if possible
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent != null)
+            {
+                cr._gameComponent.ShipTrail = _shipTrail;
+            }
         }
 
         public void Run()
@@ -120,31 +132,68 @@ namespace SpacePirates.Console.Game.Engine
 
             if (key.KeyChar == 'c' || key.KeyChar == 'C')
             {
-                var commandBuffer = new StringBuilder("");
+                _isCommandMode = true;
+                _commandInput = string.Empty;
+                _showCursor = true;
+                _lastCursorBlink = DateTime.Now;
                 _renderer.SetHelpText(""); // Clear help text for command entry
                 _renderer.EndFrame(); // Force UI update
 
-                while (true)
+                while (_isCommandMode)
                 {
-                    var cmdKey = System.Console.ReadKey(true);
-                    if (cmdKey.Key == ConsoleKey.Enter) break;
-                    if (cmdKey.Key == ConsoleKey.Backspace && commandBuffer.Length > 0)
+                    // Blinking cursor logic
+                    if ((DateTime.Now - _lastCursorBlink) > _cursorBlinkInterval)
                     {
-                        commandBuffer.Length--;
+                        _showCursor = !_showCursor;
+                        _lastCursorBlink = DateTime.Now;
+                        _renderer.SetHelpText(_commandInput + (_showCursor ? "_" : " "));
+                        _renderer.EndFrame();
                     }
-                    else if (!char.IsControl(cmdKey.KeyChar))
+
+                    if (System.Console.KeyAvailable)
                     {
-                        commandBuffer.Append(cmdKey.KeyChar);
+                        var cmdKey = System.Console.ReadKey(true);
+                        if (cmdKey.Key == ConsoleKey.Enter)
+                        {
+                            _isCommandMode = false;
+                            break;
+                        }
+                        if (cmdKey.Key == ConsoleKey.Escape)
+                        {
+                            _isCommandMode = false;
+                            _commandInput = string.Empty;
+                            break;
+                        }
+                        if (cmdKey.Key == ConsoleKey.Backspace && _commandInput.Length > 0)
+                        {
+                            _commandInput = _commandInput.Substring(0, _commandInput.Length - 1);
+                        }
+                        else if (!char.IsControl(cmdKey.KeyChar))
+                        {
+                            _commandInput += cmdKey.KeyChar;
+                        }
+                        _renderer.SetHelpText(_commandInput + (_showCursor ? "_" : " "));
+                        _renderer.EndFrame();
                     }
-                    _renderer.SetHelpText(commandBuffer.ToString());
-                    _renderer.EndFrame(); // Force UI update after each key
+                    Thread.Sleep(16); // ~60 FPS
                 }
 
-                var commandInput = commandBuffer.ToString();
+                var commandInput = _commandInput;
+                _commandInput = string.Empty;
                 var result = _commandParser?.ParseAndExecuteWithResult(commandInput);
                 if (!string.IsNullOrWhiteSpace(result))
                 {
                     _renderer.SetHelpText(result);
+                    _renderer.EndFrame();
+                    // Wait 2.5 seconds, then restore default help text
+                    var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
+                    while (DateTime.Now < restoreTime)
+                    {
+                        Thread.Sleep(50);
+                        // If a key is pressed, break early to avoid blocking input
+                        if (System.Console.KeyAvailable) break;
+                    }
+                    _renderer.SetHelpText(_defaultHelpText);
                 }
                 else
                 {
@@ -180,13 +229,27 @@ namespace SpacePirates.Console.Game.Engine
         }
 
         // Add MoveShipTo for command logic
-        public void MoveShipTo(int x, int y)
+        public void MoveShipTo(int targetX, int targetY)
         {
-            if (_gameState?.PlayerShip != null)
-            {
-                _gameState.PlayerShip.Position.X = x;
-                _gameState.PlayerShip.Position.Y = y;
-            }
+            if (_gameState?.PlayerShip == null)
+                return;
+
+            var movementSystem = new MovementSystem();
+            movementSystem.MoveShipTo(
+                _gameState.PlayerShip,
+                targetX,
+                targetY,
+                () => {
+                    _renderer.UpdateGameState(_gameState);
+                    _renderer.BeginFrame();
+                    _renderer.EndFrame();
+                },
+                (msg) => {
+                    _renderer.SetHelpText(msg);
+                    _renderer.EndFrame();
+                },
+                _shipTrail
+            );
         }
     }
 } 

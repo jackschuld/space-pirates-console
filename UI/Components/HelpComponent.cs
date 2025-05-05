@@ -17,17 +17,24 @@ namespace SpacePirates.Console.UI.Components
 
         public void Render(IBufferWriter buffer)
         {
-            // Clear help area
-            buffer.Clear(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height);
+            // Draw background for command area (now default black)
+            for (int y = _bounds.Y; y < _bounds.Y + _bounds.Height; y++)
+            {
+                for (int x = _bounds.X; x < _bounds.X + _bounds.Width; x++)
+                {
+                    buffer.DrawChar(x, y, ' ', ConsoleColor.DarkGreen, ConsoleColor.Black);
+                }
+            }
 
-            // No border for command area
+            // Optionally, draw a border (uncomment if you want a border)
+            // buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Single, ConsoleColor.Blue);
 
             // Center the command/help text
             if (!string.IsNullOrEmpty(_helpText))
             {
                 int textX = _bounds.X + (_bounds.Width - _helpText.Length) / 2;
                 int textY = _bounds.Y + _bounds.Height / 2;
-                buffer.DrawString(textX, textY, _helpText, ConsoleColor.DarkGreen);
+                buffer.DrawString(textX, textY, _helpText, ConsoleColor.Green, ConsoleColor.Black);
             }
         }
 

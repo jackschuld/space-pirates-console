@@ -16,7 +16,7 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         private readonly object _consoleLock = new object();
 
         // UI Components
-        private GameViewComponent? _gameComponent;
+        internal GameViewComponent? _gameComponent;
         private StatusComponent? _statusComponent;
         private CommandComponent? _commandComponent;
         private IGameState? _currentGameState;
