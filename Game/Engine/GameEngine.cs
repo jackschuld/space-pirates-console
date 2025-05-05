@@ -5,6 +5,8 @@ using SpacePirates.API.Models;
 using SpacePirates.Console.UI.InputHandling.CommandSystem;
 using SpacePirates.Console.UI.ConsoleRenderer;
 using System.Text;
+using SpacePirates.Console.Core.Models.Galaxy;
+using SpacePirates.Console.UI.Components;
 
 namespace SpacePirates.Console.Game.Engine
 {
@@ -36,6 +38,12 @@ namespace SpacePirates.Console.Game.Engine
         private double _shieldChargeProgress = 0;
         public bool ShowInstructionsPanel => _showInstructionsPanel;
 
+        // Galaxy map integration
+        private GameMode _gameMode = GameMode.GalaxyMap;
+        private Galaxy? _galaxy;
+        private GalaxyMapState? _galaxyMapState;
+        private GalaxyMapComponent? _galaxyMapComponent;
+
         public GameEngine(IRenderer renderer)
         {
             _renderer = renderer;
@@ -57,10 +65,24 @@ namespace SpacePirates.Console.Game.Engine
             _renderer.SetHelpText(_defaultHelpText);
 
             // Pass trail to GameViewComponent if possible
-            if (_renderer is ConsoleRenderer cr && cr._gameComponent != null)
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameViewComponent gvc)
             {
-                cr._gameComponent.ShipTrail = _shipTrail;
+                gvc.ShipTrail = _shipTrail;
             }
+
+            // Initialize galaxy and map state
+            int galaxySeed = DateTime.UtcNow.Millisecond + DateTime.UtcNow.Second * 1000;
+            _galaxy = new Galaxy(galaxySeed);
+            _galaxyMapState = new GalaxyMapState();
+            int statusWidth = ConsoleConfig.StatusAreaWidth;
+            int gameViewX = statusWidth;
+            _galaxyMapComponent = new GalaxyMapComponent(
+                gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight,
+                _galaxy, _galaxyMapState,
+                onInspect: msg => _renderer.SetHelpText(msg),
+                onLightspeedPrompt: msg => _renderer.SetHelpText(msg)
+            );
+            _gameMode = GameMode.GalaxyMap;
         }
 
         public void Run()
@@ -78,6 +100,24 @@ namespace SpacePirates.Console.Game.Engine
         {
             if (!System.Console.KeyAvailable) return;
             var key = System.Console.ReadKey(true);
+
+            // Route input to galaxy map if in galaxy mode
+            if (_gameMode == GameMode.GalaxyMap && _galaxyMapComponent != null)
+            {
+                _galaxyMapComponent.HandleInput(key);
+                // Example: handle lightspeed confirmation (not full implementation)
+                if (key.Key == ConsoleKey.Y && _renderer != null)
+                {
+                    // Confirm lightspeed: switch to solar system mode
+                    _gameMode = GameMode.SolarSystem;
+                    _renderer.SetHelpText("Entering solar system...");
+                }
+                if (key.Key == ConsoleKey.N && _renderer != null)
+                {
+                    _renderer.SetHelpText(_defaultHelpText);
+                }
+                return;
+            }
 
             // If showing quit confirmation, only accept y/n
             if (_showQuitConfirm)
@@ -297,6 +337,12 @@ namespace SpacePirates.Console.Game.Engine
         private void Render()
         {
             _renderer.BeginFrame();
+            // Render galaxy map if in galaxy mode
+            if (_gameMode == GameMode.GalaxyMap && _galaxyMapComponent != null && _renderer is ConsoleRenderer cr)
+            {
+                cr._gameComponent = _galaxyMapComponent;
+            }
+            // (Else, use the normal game view component)
             _renderer.EndFrame();
         }
 

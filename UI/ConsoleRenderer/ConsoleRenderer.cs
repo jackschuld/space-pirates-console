@@ -16,7 +16,7 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         private readonly object _consoleLock = new object();
 
         // UI Components
-        internal GameViewComponent? _gameComponent;
+        internal IGameComponent? _gameComponent;
         private StatusComponent? _statusComponent;
         private CommandComponent? _commandComponent;
         private IGameState? _currentGameState;
@@ -111,12 +111,12 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             }
             _commandComponent?.Render(commandBuffer);
 
-            // Draw X axis numbers below the game area
-            if (_gameComponent != null)
+            // Draw X axis numbers below the game area (only for GameViewComponent)
+            if (_gameComponent is GameViewComponent gvc)
             {
                 int numbersY = ConsoleConfig.XAxisLabelRow;
-                int xStart = _gameComponent.LeftBorderX;
-                int maxX = _gameComponent.UsableWidth;
+                int xStart = gvc.LeftBorderX;
+                int maxX = gvc.UsableWidth;
                 int labelCount = 8; // Number of labels to show (including 1 and max)
                 int[] xLabels = { 1, 12, 23, 34, 45, 56, 67, 75 };
                 foreach (int x in xLabels)
