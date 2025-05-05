@@ -5,8 +5,9 @@ namespace SpacePirates.Console.UI.Components
 {
     public class CommandComponent : IHelpComponent
     {
+        public static readonly string DefaultHelpText = "Tab to toggle instructions | ESC to exit";
         private readonly (int X, int Y, int Width, int Height) _bounds;
-        private string _helpText = "Type 'c' to enter command mode | ESC to exit";
+        private string _helpText = DefaultHelpText;
 
         public CommandComponent(int x, int y, int width, int height)
         {
@@ -34,7 +35,7 @@ namespace SpacePirates.Console.UI.Components
             {
                 int textX = _bounds.X + (_bounds.Width - _helpText.Length) / 2;
                 int textY = _bounds.Y + _bounds.Height / 2;
-                buffer.DrawString(textX, textY, _helpText, ConsoleColor.Green, ConsoleColor.Black);
+                buffer.DrawString(textX, textY, _helpText, ConsoleColor.DarkGreen, ConsoleColor.Black);
             }
         }
 

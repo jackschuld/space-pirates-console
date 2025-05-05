@@ -111,11 +111,11 @@ namespace SpacePirates.Console.UI.Components
     {
         public static readonly string[] Commands = new[]
         {
-            MoveCommand.Description
+            "Move: x y or xy",
         };
         public static readonly (string Key, string Description)[] QuickKeys = new[]
         {
-            ("c", "Enter command mode"),
+            ("m", "Start a Move command"),
             ("Tab", "Toggle this panel (Status/Instructions)"),
             ("ESC", "Quit game")
         };

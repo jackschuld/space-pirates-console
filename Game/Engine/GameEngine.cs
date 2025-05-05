@@ -15,7 +15,7 @@ namespace SpacePirates.Console.Game.Engine
         private bool _isRunning;
         private CommandParser? _commandParser;
         private MoveCommand? _moveCommand;
-        private string _defaultHelpText = "Type 'c' to enter command mode | ESC to exit";
+        private string _defaultHelpText = SpacePirates.Console.UI.Components.CommandComponent.DefaultHelpText;
         private string _lastCommandResult = string.Empty;
         private bool _showInstructions = false;
         private readonly string _instructionsText =
@@ -132,79 +132,94 @@ namespace SpacePirates.Console.Game.Engine
                 return;
             }
 
-            if (key.KeyChar == 'c' || key.KeyChar == 'C')
+            // If a command key is pressed, enter command mode with prefix
+            if (char.IsLetter(key.KeyChar))
             {
-                _isCommandMode = true;
-                _commandInput = string.Empty;
-                _showCursor = true;
-                _lastCursorBlink = DateTime.Now;
-                _renderer.SetHelpText(""); // Clear help text for command entry
-                _renderer.EndFrame(); // Force UI update
-
-                while (_isCommandMode)
+                string prefix = string.Empty;
+                switch (char.ToLower(key.KeyChar))
                 {
-                    // Blinking cursor logic
-                    if ((DateTime.Now - _lastCursorBlink) > _cursorBlinkInterval)
-                    {
-                        _showCursor = !_showCursor;
-                        _lastCursorBlink = DateTime.Now;
-                        _renderer.SetHelpText(_commandInput + (_showCursor ? "_" : " "));
-                        _renderer.EndFrame();
-                    }
-
-                    if (System.Console.KeyAvailable)
-                    {
-                        var cmdKey = System.Console.ReadKey(true);
-                        if (cmdKey.Key == ConsoleKey.Enter)
-                        {
-                            _isCommandMode = false;
-                            break;
-                        }
-                        if (cmdKey.Key == ConsoleKey.Escape)
-                        {
-                            _isCommandMode = false;
-                            _commandInput = string.Empty;
-                            break;
-                        }
-                        if (cmdKey.Key == ConsoleKey.Backspace && _commandInput.Length > 0)
-                        {
-                            _commandInput = _commandInput.Substring(0, _commandInput.Length - 1);
-                        }
-                        else if (!char.IsControl(cmdKey.KeyChar))
-                        {
-                            _commandInput += cmdKey.KeyChar;
-                        }
-                        _renderer.SetHelpText(_commandInput + (_showCursor ? "_" : " "));
-                        _renderer.EndFrame();
-                    }
-                    Thread.Sleep(16); // ~60 FPS
+                    case 'm':
+                        prefix = "Move: ";
+                        break;
+                    // Add more cases for other commands as needed
                 }
-
-                var commandInput = _commandInput;
-                _commandInput = string.Empty;
-                var result = _commandParser?.ParseAndExecuteWithResult(commandInput);
-                if (!string.IsNullOrWhiteSpace(result))
+                if (!string.IsNullOrEmpty(prefix))
                 {
-                    _renderer.SetHelpText(result);
+                    _isCommandMode = true;
+                    _commandInput = string.Empty;
+                    _showCursor = true;
+                    _lastCursorBlink = DateTime.Now;
+                    _renderer.SetHelpText(prefix);
                     _renderer.EndFrame();
-                    // Wait 2.5 seconds, then restore default help text
-                    var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
-                    while (DateTime.Now < restoreTime)
+
+                    while (_isCommandMode)
                     {
-                        Thread.Sleep(50);
-                        // If a key is pressed, break early to avoid blocking input
-                        if (System.Console.KeyAvailable) break;
+                        if ((DateTime.Now - _lastCursorBlink) > _cursorBlinkInterval)
+                        {
+                            _showCursor = !_showCursor;
+                            _lastCursorBlink = DateTime.Now;
+                            _renderer.SetHelpText(prefix + _commandInput + (_showCursor ? "_" : " "));
+                            _renderer.EndFrame();
+                        }
+                        if (System.Console.KeyAvailable)
+                        {
+                            var cmdKey = System.Console.ReadKey(true);
+                            if (cmdKey.Key == ConsoleKey.Enter)
+                            {
+                                _isCommandMode = false;
+                                break;
+                            }
+                            if (cmdKey.Key == ConsoleKey.Escape)
+                            {
+                                _isCommandMode = false;
+                                _commandInput = string.Empty;
+                                break;
+                            }
+                            if (cmdKey.Key == ConsoleKey.Backspace && _commandInput.Length > 0)
+                            {
+                                _commandInput = _commandInput.Substring(0, _commandInput.Length - 1);
+                            }
+                            else if (!char.IsControl(cmdKey.KeyChar))
+                            {
+                                _commandInput += cmdKey.KeyChar;
+                            }
+                            _renderer.SetHelpText(prefix + _commandInput + (_showCursor ? "_" : " "));
+                            _renderer.EndFrame();
+                        }
+                        Thread.Sleep(16);
                     }
-                    _renderer.SetHelpText(_defaultHelpText);
+                    // Remove the prefix and build the actual command string
+                    string commandInput = string.Empty;
+                    switch (prefix)
+                    {
+                        case "Move: ":
+                            commandInput = "move " + _commandInput;
+                            break;
+                        // Add more cases for other commands as needed
+                    }
+                    _commandInput = string.Empty;
+                    var result = _commandParser?.ParseAndExecuteWithResult(commandInput);
+                    if (!string.IsNullOrWhiteSpace(result))
+                    {
+                        _renderer.SetHelpText(result);
+                        _renderer.EndFrame();
+                        var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
+                        while (DateTime.Now < restoreTime)
+                        {
+                            Thread.Sleep(50);
+                            if (System.Console.KeyAvailable) break;
+                        }
+                        _renderer.SetHelpText(_defaultHelpText);
+                    }
+                    else
+                    {
+                        _renderer.SetHelpText(_defaultHelpText);
+                    }
+                    if (_renderer is ConsoleRenderer cr3)
+                        cr3.ShowInstructionsPanel = _showInstructionsPanel;
+                    _renderer.EndFrame();
+                    return;
                 }
-                else
-                {
-                    _renderer.SetHelpText(_defaultHelpText);
-                }
-                if (_renderer is ConsoleRenderer cr3)
-                    cr3.ShowInstructionsPanel = _showInstructionsPanel;
-                _renderer.EndFrame(); // Restore help text in UI
-                return;
             }
 
             // Shield activation: 's' to start charging if off, or turn off if on
