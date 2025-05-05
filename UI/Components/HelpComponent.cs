@@ -6,7 +6,7 @@ namespace SpacePirates.Console.UI.Components
     public class HelpComponent : IHelpComponent
     {
         private readonly (int X, int Y, int Width, int Height) _bounds;
-        private string _helpText = "Use arrow keys to navigate | SPACE to select | ESC to exit";
+        private string _helpText = "Type ':' to enter command mode | Type 'i' for instructions | ESC to exit";
 
         public HelpComponent(int x, int y, int width, int height)
         {
