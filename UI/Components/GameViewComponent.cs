@@ -14,6 +14,7 @@ namespace SpacePirates.Console.UI.Components
         private readonly int _usableWidth;
         private readonly int _usableHeight;
         private ShipTrail? _shipTrail;
+        private SolarSystem? _solarSystem;
         public ShipTrail? ShipTrail { get => _shipTrail; set => _shipTrail = value; }
 
         public GameViewComponent(int x, int y, int width, int height)
@@ -22,6 +23,12 @@ namespace SpacePirates.Console.UI.Components
             // Calculate usable area (subtract 2 for borders)
             _usableWidth = width - 2;
             _usableHeight = height - 2;
+        }
+
+        public GameViewComponent(int x, int y, int width, int height, SolarSystem solarSystem)
+            : this(x, y, width, height)
+        {
+            _solarSystem = solarSystem;
         }
 
         public (int X, int Y, int Width, int Height) Bounds => _bounds;
@@ -71,6 +78,30 @@ namespace SpacePirates.Console.UI.Components
                 cbw.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Double, PanelStyles.BorderColor);
             else
                 buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BoxStyle.Double);
+
+            // Draw planets if in a solar system
+            if (_solarSystem != null)
+            {
+                int planetStartX = _bounds.X + 6;
+                int planetStartY = _bounds.Y + 4;
+                int planetSpacingY = 5;
+                int planetRadius = 1;
+                int i = 0;
+                foreach (var planet in _solarSystem.Planets)
+                {
+                    int px = planetStartX;
+                    int py = planetStartY + i * planetSpacingY;
+                    // Draw planet as a colored circle
+                    buffer.DrawChar(px, py, '●', ConsoleColor.Yellow);
+                    buffer.DrawString(px + 2, py, planet.Name + " (" + planet.PlanetType + ")", ConsoleColor.Gray);
+                    int ry = py + 1;
+                    foreach (var res in planet.Resources)
+                    {
+                        buffer.DrawString(px + 4, ry++, $"{res.Resource.Name}: {res.AmountAvailable}", ConsoleColor.DarkYellow);
+                    }
+                    i++;
+                }
+            }
 
             // Draw selected capital letters vertically along the right side of the game area
             int[] letterIndices = { 0, 5, 10, 15, 20, 25 }; // A, F, K, P, U, Z

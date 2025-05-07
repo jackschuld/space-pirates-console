@@ -16,10 +16,12 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         private readonly object _consoleLock = new object();
 
         // UI Components
-        internal GameViewComponent? _gameComponent;
+        internal IGameComponent? _gameComponent;
         private StatusComponent? _statusComponent;
         private CommandComponent? _commandComponent;
         private IGameState? _currentGameState;
+
+        private SpacePirates.Console.Game.Engine.GameEngine.ControlState _controlState = SpacePirates.Console.Game.Engine.GameEngine.ControlState.GalaxyMap;
 
         public bool ShowInstructionsPanel { get; set; } = false;
 
@@ -102,7 +104,7 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             _gameComponent?.Render(gameBuffer);
             if (ShowInstructionsPanel)
             {
-                var instructionsPanel = new InstructionsPanelComponent(_statusComponent.Bounds.X, _statusComponent.Bounds.Y, _statusComponent.Bounds.Width, _statusComponent.Bounds.Height);
+                var instructionsPanel = new InstructionsPanelComponent(_statusComponent.Bounds.X, _statusComponent.Bounds.Y, _statusComponent.Bounds.Width, _statusComponent.Bounds.Height, _controlState);
                 instructionsPanel.Render(statusBuffer);
             }
             else
@@ -111,13 +113,12 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             }
             _commandComponent?.Render(commandBuffer);
 
-            // Draw X axis numbers below the game area
-            if (_gameComponent != null)
+            // Draw X axis numbers below the game area (only for GameViewComponent)
+            if (_gameComponent is GameViewComponent gvc)
             {
                 int numbersY = ConsoleConfig.XAxisLabelRow;
-                int xStart = _gameComponent.LeftBorderX;
-                int maxX = _gameComponent.UsableWidth;
-                int labelCount = 8; // Number of labels to show (including 1 and max)
+                int xStart = gvc.LeftBorderX;
+                int maxX = gvc.UsableWidth;
                 int[] xLabels = { 1, 12, 23, 34, 45, 56, 67, 75 };
                 foreach (int x in xLabels)
                 {
@@ -214,6 +215,11 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         public void SetHelpText(string text)
         {
             _commandComponent?.SetHelpText(text);
+        }
+
+        public void SetControlState(SpacePirates.Console.Game.Engine.GameEngine.ControlState state)
+        {
+            _controlState = state;
         }
 
         private static int GetColorCode(ConsoleColor color)

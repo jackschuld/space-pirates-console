@@ -30,6 +30,9 @@ namespace SpacePirates.Console.UI.Components
 
             var ship = _gameState.PlayerShip;
 
+            // Show ship name and captain name at the top
+            buffer.DrawString(textX, y++, $"Ship: {ship.Name} | Captain: {ship.CaptainName}", ConsoleColor.White, ConsoleColor.Black);
+
             // NAME and POSITION on the same line, values below
             int posLabelX = textX + 16;
             buffer.DrawString(textX, y, "NAME:", PanelStyles.SubtitleColor);
@@ -125,10 +128,16 @@ namespace SpacePirates.Console.UI.Components
     public class InstructionsPanelComponent : IStatusComponent
     {
         private readonly (int X, int Y, int Width, int Height) _bounds;
+        private readonly SpacePirates.Console.Game.Engine.GameEngine.ControlState? _controlState;
 
         public InstructionsPanelComponent(int x, int y, int width, int height)
         {
             _bounds = (x, y, width, height);
+        }
+        public InstructionsPanelComponent(int x, int y, int width, int height, SpacePirates.Console.Game.Engine.GameEngine.ControlState controlState)
+        {
+            _bounds = (x, y, width, height);
+            _controlState = controlState;
         }
 
         public (int X, int Y, int Width, int Height) Bounds => _bounds;
@@ -139,9 +148,46 @@ namespace SpacePirates.Console.UI.Components
             PanelRenderer.DrawPanelFrameWithTab(buffer, _bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, InstructionsData.Header, PanelStyles.TitleColor);
             int y = _bounds.Y + 3;
             int textX = _bounds.X + 2;
+
+            // Select instructions and quick keys based on control state
+            string[] commands;
+            (string Key, string Description)[] quickKeys;
+            switch (_controlState)
+            {
+                case SpacePirates.Console.Game.Engine.GameEngine.ControlState.GalaxyMap:
+                    commands = new[] { "Move: h/j/k/l", "Warp: w + System ID" };
+                    quickKeys = new[] {
+                        ("h/j/k/l", "Move cursor"),
+                        ("w", "Start a Warp command"),
+                        ("Tab", "Toggle this panel (Status/Instructions)"),
+                        ("ESC", "Quit game")
+                    };
+                    break;
+                case SpacePirates.Console.Game.Engine.GameEngine.ControlState.SolarSystemView:
+                    commands = new[] { "Move: x y or xy" };
+                    quickKeys = new[] {
+                        ("m", "Start a Move command"),
+                        ("s", "Toggle shield"),
+                        ("Tab", "Toggle this panel (Status/Instructions)"),
+                        ("ESC", "Quit game")
+                    };
+                    break;
+                case SpacePirates.Console.Game.Engine.GameEngine.ControlState.StartMenu:
+                    commands = new[] { "Move: h/j/k/l", "Select: Enter" };
+                    quickKeys = new[] {
+                        ("h/j/k/l", "Move selection"),
+                        ("Enter", "Select option")
+                    };
+                    break;
+                default:
+                    commands = InstructionsData.Commands;
+                    quickKeys = InstructionsData.QuickKeys;
+                    break;
+            }
+
             // Commands section
             buffer.DrawString(textX, y++, "COMMANDS:", PanelStyles.SubtitleColor);
-            foreach (var desc in InstructionsData.Commands)
+            foreach (var desc in commands)
             {
                 buffer.DrawString(textX, y++, desc, ConsoleColor.DarkGreen);
             }
@@ -150,7 +196,7 @@ namespace SpacePirates.Console.UI.Components
             buffer.DrawString(textX, y++, new string('─', _bounds.Width - 4), PanelStyles.FadedColor);
             // Quick keys section
             buffer.DrawString(textX, y++, "QUICK KEYS:", PanelStyles.SubtitleColor);
-            foreach (var (key, desc) in InstructionsData.QuickKeys)
+            foreach (var (key, desc) in quickKeys)
             {
                 y = DrawStyled(buffer, textX, y, key, desc, _bounds.Width - 4, PanelStyles.SubtitleColor, ConsoleColor.Gray, false, true);
             }

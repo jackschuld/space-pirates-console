@@ -5,13 +5,16 @@ using SpacePirates.API.Models;
 using SpacePirates.Console.UI.InputHandling.CommandSystem;
 using SpacePirates.Console.UI.ConsoleRenderer;
 using System.Text;
+using SpacePirates.Console.UI.Components;
+using System.ComponentModel;
+using System.Linq;
 
 namespace SpacePirates.Console.Game.Engine
 {
     public class GameEngine
     {
         private readonly IRenderer _renderer;
-        private IGameState? _gameState;
+        private SpacePirates.Console.Core.Models.State.GameState? _gameState;
         private bool _isRunning;
         private CommandParser? _commandParser;
         private MoveCommand? _moveCommand;
@@ -36,6 +39,16 @@ namespace SpacePirates.Console.Game.Engine
         private double _shieldChargeProgress = 0;
         public bool ShowInstructionsPanel => _showInstructionsPanel;
 
+        public enum ControlState
+        {
+            StartMenu,
+            GalaxyMap,
+            SolarSystemView,
+            NameEntry,
+            CommandLine
+        }
+        private ControlState _currentState = ControlState.GalaxyMap;
+
         public GameEngine(IRenderer renderer)
         {
             _renderer = renderer;
@@ -45,7 +58,7 @@ namespace SpacePirates.Console.Game.Engine
         public void Initialize()
         {
             _renderer.Initialize();  // Use ConsoleConfig values instead of hardcoded dimensions
-            _gameState = new GameState(); // Initialize with default state
+            _gameState = new SpacePirates.Console.Core.Models.State.GameState(); // Initialize with default state
             _isRunning = true;
 
             // Setup command system
@@ -57,9 +70,36 @@ namespace SpacePirates.Console.Game.Engine
             _renderer.SetHelpText(_defaultHelpText);
 
             // Pass trail to GameViewComponent if possible
-            if (_renderer is ConsoleRenderer cr && cr._gameComponent != null)
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameViewComponent gvc)
             {
-                cr._gameComponent.ShipTrail = _shipTrail;
+                gvc.ShipTrail = _shipTrail;
+            }
+        }
+
+        public void Initialize(SpacePirates.Console.Core.Models.State.GameState loadedState)
+        {
+            _renderer.Initialize();
+            _gameState = loadedState;
+            _isRunning = true;
+
+            // Setup command system
+            var context = new CommandContext(this, _renderer);
+            _moveCommand = new MoveCommand();
+            _commandParser = new CommandParser(context, new[] { _moveCommand });
+
+            // Set initial help text
+            _renderer.SetHelpText(_defaultHelpText);
+
+            // Show the galaxy map as the main component
+            if (_renderer is ConsoleRenderer cr && _gameState is GameState gs && gs.Galaxy != null)
+            {
+                cr._gameComponent = new SpacePirates.Console.UI.Components.GalaxyMapComponent(gs.Galaxy);
+            }
+
+            // Pass trail to GameViewComponent if possible
+            if (_renderer is ConsoleRenderer cr2 && cr2._gameComponent is GameViewComponent gvc2)
+            {
+                gvc2.ShipTrail = _shipTrail;
             }
         }
 
@@ -106,149 +146,286 @@ namespace SpacePirates.Console.Game.Engine
                 return;
             }
 
-            // Quick key: ESC to quit (show confirmation)
-            if (key.Key == ConsoleKey.Escape)
+            switch (_currentState)
             {
-                _showQuitConfirm = true;
-                _wasShowingInstructions = _showInstructions;
-                _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
-                _renderer.EndFrame();
-                return;
+                case ControlState.StartMenu:
+                    // Only allow h/j/k/l and Enter for menu navigation
+                    if (key.Key == ConsoleKey.Enter)
+                    {
+                        // TODO: Implement menu selection logic
+                    }
+                    else if ("hjklHJLK".Contains(key.KeyChar))
+                    {
+                        // TODO: Implement menu movement logic
+                    }
+                    break;
+                case ControlState.GalaxyMap:
+                    HandleGalaxyMapInput(key);
+                    break;
+                case ControlState.SolarSystemView:
+                    HandleSolarSystemInput(key);
+                    break;
+                case ControlState.NameEntry:
+                    // Only allow text input and Enter
+                    break;
+                case ControlState.CommandLine:
+                    // Only allow command line input
+                    break;
             }
+        }
 
-            // Quick key: Tab to toggle instructions panel
-            if (key.Key == ConsoleKey.Tab)
+        private void HandleGalaxyMapInput(ConsoleKeyInfo key)
+        {
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GalaxyMapComponent galaxyMap)
             {
-                _showInstructionsPanel = !_showInstructionsPanel;
-                if (_renderer is ConsoleRenderer cr2)
-                    cr2.ShowInstructionsPanel = _showInstructionsPanel;
-                _renderer.EndFrame();
-                return;
-            }
-
-            if (_showInstructions)
-            {
-                // Ignore all other input while instructions are shown
-                return;
-            }
-
-            // If a command key is pressed, enter command mode with prefix
-            if (char.IsLetter(key.KeyChar))
-            {
-                string prefix = string.Empty;
                 switch (char.ToLower(key.KeyChar))
                 {
-                    case 'm':
-                        prefix = "Move: ";
+                    case 'h':
+                    case 'j':
+                    case 'k':
+                    case 'l':
+                        galaxyMap.HandleInput(key);
                         break;
-                    // Add more cases for other commands as needed
-                }
-                if (!string.IsNullOrEmpty(prefix))
-                {
-                    _isCommandMode = true;
-                    _commandInput = string.Empty;
-                    _showCursor = true;
-                    _lastCursorBlink = DateTime.Now;
-                    _renderer.SetHelpText(prefix);
-                    _renderer.EndFrame();
-
-                    while (_isCommandMode)
-                    {
-                        if ((DateTime.Now - _lastCursorBlink) > _cursorBlinkInterval)
-                        {
-                            _showCursor = !_showCursor;
-                            _lastCursorBlink = DateTime.Now;
-                            _renderer.SetHelpText(prefix + _commandInput + (_showCursor ? "_" : " "));
-                            _renderer.EndFrame();
-                        }
-                        if (System.Console.KeyAvailable)
-                        {
-                            var cmdKey = System.Console.ReadKey(true);
-                            if (cmdKey.Key == ConsoleKey.Enter)
-                            {
-                                _isCommandMode = false;
-                                break;
-                            }
-                            if (cmdKey.Key == ConsoleKey.Escape)
-                            {
-                                _isCommandMode = false;
-                                _commandInput = string.Empty;
-                                break;
-                            }
-                            if (cmdKey.Key == ConsoleKey.Backspace && _commandInput.Length > 0)
-                            {
-                                _commandInput = _commandInput.Substring(0, _commandInput.Length - 1);
-                            }
-                            else if (!char.IsControl(cmdKey.KeyChar))
-                            {
-                                _commandInput += cmdKey.KeyChar;
-                            }
-                            _renderer.SetHelpText(prefix + _commandInput + (_showCursor ? "_" : " "));
-                            _renderer.EndFrame();
-                        }
-                        Thread.Sleep(16);
-                    }
-                    // Remove the prefix and build the actual command string
-                    string commandInput = string.Empty;
-                    switch (prefix)
-                    {
-                        case "Move: ":
-                            commandInput = "move " + _commandInput;
-                            break;
-                        // Add more cases for other commands as needed
-                    }
-                    _commandInput = string.Empty;
-                    var result = _commandParser?.ParseAndExecuteWithResult(commandInput);
-                    if (!string.IsNullOrWhiteSpace(result))
-                    {
-                        _renderer.SetHelpText(result);
+                    case 'w':
+                        // Enter warp command mode: prompt for system ID
+                        _renderer.SetHelpText("Enter system ID to warp to:");
                         _renderer.EndFrame();
-                        var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
-                        while (DateTime.Now < restoreTime)
+                        string input = string.Empty;
+                        bool done = false;
+                        while (!done)
                         {
-                            Thread.Sleep(50);
-                            if (System.Console.KeyAvailable) break;
+                            if (System.Console.KeyAvailable)
+                            {
+                                var warpKey = System.Console.ReadKey(true);
+                                if (warpKey.Key == ConsoleKey.Enter)
+                                {
+                                    done = true;
+                                }
+                                else if (warpKey.Key == ConsoleKey.Escape)
+                                {
+                                    _renderer.SetHelpText(_defaultHelpText);
+                                    _renderer.EndFrame();
+                                    return;
+                                }
+                                else if (warpKey.Key == ConsoleKey.Backspace)
+                                {
+                                    if (input.Length > 0)
+                                        input = input.Substring(0, input.Length - 1);
+                                }
+                                else if (!char.IsControl(warpKey.KeyChar))
+                                {
+                                    input += warpKey.KeyChar;
+                                }
+                                _renderer.SetHelpText($"Enter system ID to warp to: {input}");
+                                _renderer.EndFrame();
+                            }
                         }
+                        // Try to find the solar system by ID or name
+                        var galaxy = (_gameState as GameState)?.Galaxy;
+                        SolarSystem? system = null;
+                        if (galaxy != null)
+                        {
+                            // Try by decimal ID
+                            if (int.TryParse(input, out int decId))
+                                system = galaxy.SolarSystems.FirstOrDefault(s => s.Id == decId);
+
+                            // Try by hex ID (last 4 chars of name)
+                            if (system == null && int.TryParse(input, System.Globalization.NumberStyles.HexNumber, null, out int hexId))
+                                system = galaxy.SolarSystems.FirstOrDefault(s => s.Id.ToString("x4").Equals(input, StringComparison.OrdinalIgnoreCase));
+
+                            // Try by name (case-insensitive, full or last 4 chars)
+                            if (system == null)
+                                system = galaxy.SolarSystems.FirstOrDefault(s => s.Name.EndsWith(input, StringComparison.OrdinalIgnoreCase) || s.Name.Equals(input, StringComparison.OrdinalIgnoreCase));
+                        }
+                        if (system != null)
+                        {
+                            // Move ship to the solar system's coordinates
+                            if (_gameState is GameState gs)
+                            {
+                                gs.PlayerShip.Position.X = system.X;
+                                gs.PlayerShip.Position.Y = system.Y;
+                                // Optionally: gs.CurrentSolarSystem = system; // if you want to track it
+                            }
+                            // Switch to GameViewComponent for the solar system view, passing the system
+                            cr._gameComponent = new GameViewComponent(cr._gameComponent.Bounds.X, cr._gameComponent.Bounds.Y, cr._gameComponent.Bounds.Width, cr._gameComponent.Bounds.Height, system);
+                            cr.SetControlState(ControlState.SolarSystemView);
+                            _currentState = ControlState.SolarSystemView;
+                            _renderer.SetHelpText($"Warped to system: {system.Name}");
+                            _renderer.EndFrame();
+                            return;
+                        }
+                        // Not found or invalid
+                        _renderer.SetHelpText("Invalid system ID. Press any key to return.");
+                        _renderer.EndFrame();
+                        System.Console.ReadKey(true);
                         _renderer.SetHelpText(_defaultHelpText);
+                        _renderer.EndFrame();
+                        break;
+                    case '\t':
+                        _showInstructionsPanel = !_showInstructionsPanel;
+                        if (_renderer is ConsoleRenderer cr2)
+                            cr2.ShowInstructionsPanel = _showInstructionsPanel;
+                        _renderer.EndFrame();
+                        break;
+                    case (char)27: // ESC
+                        _showQuitConfirm = true;
+                        _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
+                        _renderer.EndFrame();
+                        break;
+                }
+            }
+        }
+
+        // Reusable command mode input loop
+        private string CommandInputLoop(string prompt)
+        {
+            _isCommandMode = true;
+            _commandInput = string.Empty;
+            _showCursor = true;
+            _lastCursorBlink = DateTime.Now;
+            _renderer.SetHelpText(prompt);
+            _renderer.EndFrame();
+            string input = string.Empty;
+            while (_isCommandMode)
+            {
+                if ((DateTime.Now - _lastCursorBlink) > _cursorBlinkInterval)
+                {
+                    _showCursor = !_showCursor;
+                    _lastCursorBlink = DateTime.Now;
+                    _renderer.SetHelpText(prompt + input + (_showCursor ? "_" : " "));
+                    _renderer.EndFrame();
+                }
+                if (System.Console.KeyAvailable)
+                {
+                    var cmdKey = System.Console.ReadKey(true);
+                    if (cmdKey.Key == ConsoleKey.Enter)
+                    {
+                        _isCommandMode = false;
+                        break;
+                    }
+                    if (cmdKey.Key == ConsoleKey.Escape)
+                    {
+                        _isCommandMode = false;
+                        input = string.Empty;
+                        break;
+                    }
+                    if (cmdKey.Key == ConsoleKey.Backspace && input.Length > 0)
+                    {
+                        input = input.Substring(0, input.Length - 1);
+                    }
+                    else if (!char.IsControl(cmdKey.KeyChar))
+                    {
+                        input += cmdKey.KeyChar;
+                    }
+                    _renderer.SetHelpText(prompt + input + (_showCursor ? "_" : " "));
+                    _renderer.EndFrame();
+                }
+                Thread.Sleep(16);
+            }
+            return input;
+        }
+
+        private void HandleSolarSystemInput(ConsoleKeyInfo key)
+        {
+            // Only allow m, s, Tab, Esc
+            switch (char.ToLower(key.KeyChar))
+            {
+                case 'm':
+                    // Start move command
+                    var moveInput = CommandInputLoop("Move: ");
+                    if (!string.IsNullOrWhiteSpace(moveInput))
+                    {
+                        // Accept formats like '12 A', '12A', '12,a', '12a', etc.
+                        moveInput = moveInput.Replace(",", " ").Replace("-", " ").Trim();
+                        string xPart = string.Empty, yPart = string.Empty;
+                        var parts = moveInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length == 2)
+                        {
+                            xPart = parts[0];
+                            yPart = parts[1];
+                        }
+                        else if (parts.Length == 1)
+                        {
+                            // Try to split number and letter, e.g. 12A
+                            var s = parts[0];
+                            int i = 0;
+                            while (i < s.Length && char.IsDigit(s[i])) i++;
+                            if (i > 0 && i < s.Length)
+                            {
+                                xPart = s.Substring(0, i);
+                                yPart = s.Substring(i);
+                            }
+                        }
+                        if (int.TryParse(xPart, out int x) && yPart.Length == 1 && char.IsLetter(yPart[0]))
+                        {
+                            int y = char.ToUpper(yPart[0]) - 'A' + 1;
+                            MoveShipTo(x, y);
+                        }
+                        else
+                        {
+                            _renderer.SetHelpText("Invalid coordinates. Use: x y (e.g. 12 A or 12A)");
+                            _renderer.EndFrame();
+                            Thread.Sleep(1200);
+                            _renderer.SetHelpText(_defaultHelpText);
+                        }
                     }
                     else
                     {
                         _renderer.SetHelpText(_defaultHelpText);
+                        _renderer.EndFrame();
                     }
-                    if (_renderer is ConsoleRenderer cr3)
-                        cr3.ShowInstructionsPanel = _showInstructionsPanel;
-                    _renderer.EndFrame();
-                    return;
-                }
-            }
-
-            // Shield activation: 's' to start charging if off, or turn off if on
-            if (key.Key == ConsoleKey.S && _gameState?.PlayerShip?.Shield != null)
-            {
-                var shield = _gameState.PlayerShip.Shield;
-                if (!shield.IsActive && !shield.Charging)
-                {
-                    shield.Charging = true;
-                    shield.CurrentIntegrity = 0;
-                    _lastShieldChargeUpdate = DateTime.UtcNow;
-                    _shieldChargeProgress = 0;
-                    _renderer.SetHelpText("Shield charging...");
-                }
-                else if (shield.IsActive && !shield.Charging)
-                {
-                    shield.IsActive = false;
-                    shield.CurrentIntegrity = 0;
-                    _renderer.SetHelpText("Turning shields off...");
-                    // Hide message after 2.5s
-                    var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
-                    while (DateTime.Now < restoreTime)
+                    break;
+                case 's':
+                    // Toggle shield with charging animation
+                    if (_gameState?.PlayerShip?.Shield != null)
                     {
-                        Thread.Sleep(50);
-                        if (System.Console.KeyAvailable) break;
+                        var shield = _gameState.PlayerShip.Shield;
+                        if (!shield.IsActive && !shield.Charging)
+                        {
+                            shield.Charging = true;
+                            shield.CurrentIntegrity = 0;
+                            _renderer.SetHelpText("Shield charging...");
+                            _renderer.EndFrame();
+                            int maxCapacity = shield.CalculateMaxCapacity();
+                            int chargeSteps = 20;
+                            int msPerStep = 10000 / chargeSteps;
+                            for (int i = 1; i <= chargeSteps; i++)
+                            {
+                                shield.CurrentIntegrity = (int)(maxCapacity * (i / (double)chargeSteps));
+                                _renderer.SetHelpText($"Shield charging... {shield.CurrentIntegrity * 100 / maxCapacity}%");
+                                _renderer.EndFrame();
+                                Thread.Sleep(msPerStep);
+                            }
+                            shield.CurrentIntegrity = maxCapacity;
+                            shield.IsActive = true;
+                            shield.Charging = false;
+                            _renderer.SetHelpText("Shield fully charged!");
+                            _renderer.EndFrame();
+                            Thread.Sleep(800);
+                            _renderer.SetHelpText(_defaultHelpText);
+                        }
+                        else if (shield.IsActive && !shield.Charging)
+                        {
+                            shield.IsActive = false;
+                            shield.CurrentIntegrity = 0;
+                            _renderer.SetHelpText("Shield deactivated!");
+                            _renderer.EndFrame();
+                            Thread.Sleep(800);
+                            _renderer.SetHelpText(_defaultHelpText);
+                        }
                     }
-                    _renderer.SetHelpText(_defaultHelpText);
-                }
-                return;
+                    break;
+                case '\t':
+                    _showInstructionsPanel = !_showInstructionsPanel;
+                    if (_renderer is ConsoleRenderer cr2)
+                        cr2.ShowInstructionsPanel = _showInstructionsPanel;
+                    _renderer.EndFrame();
+                    break;
+                case (char)27: // ESC
+                    _showQuitConfirm = true;
+                    _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
+                    _renderer.EndFrame();
+                    break;
             }
         }
 
