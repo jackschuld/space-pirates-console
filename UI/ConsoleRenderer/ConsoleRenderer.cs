@@ -1,6 +1,9 @@
 using SpacePirates.Console.Core.Interfaces;
 using SpacePirates.Console.Core.Models.State;
 using SpacePirates.Console.UI.Components;
+using SpacePirates.Console.UI.Views;
+using SpacePirates.Console.UI.Controls;
+using SpacePirates.Console.UI.Styles;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -16,14 +19,20 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         private readonly object _consoleLock = new object();
 
         // UI Components
-        internal IGameComponent? _gameComponent;
-        private StatusComponent? _statusComponent;
-        private CommandComponent? _commandComponent;
+        internal GameView? _gameComponent;
+        private PanelView? _leftPanelComponent;
+        private CommandLineView? _commandLineView;
         private IGameState? _currentGameState;
 
         private SpacePirates.Console.Game.Engine.GameEngine.ControlState _controlState = SpacePirates.Console.Game.Engine.GameEngine.ControlState.GalaxyMap;
 
         public bool ShowInstructionsPanel { get; set; } = false;
+
+        public static MapView? CurrentMapView { get; private set; }
+
+        private GameControls _controls = new GameControls();
+        private StatusPanelStyle _statusStyle = new StatusPanelStyle();
+        private InstructionsPanelStyle _instructionsStyle = new InstructionsPanelStyle();
 
         public ConsoleRenderer()
         {
@@ -38,7 +47,7 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         public void Initialize()
         {
             _width = ConsoleConfig.DEFAULT_CONSOLE_WIDTH;
-            _height = ConsoleConfig.DEFAULT_CONSOLE_HEIGHT;
+            _height = ConsoleConfig.DEFAULT_CONSOLE_HEIGHT + ConsoleConfig.AXIS_LABEL_HEIGHT;
 
             // Initialize buffers
             _currentBuffer = new ConsoleBuffer[_width, _height];
@@ -69,9 +78,13 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             int statusWidth = ConsoleConfig.StatusAreaWidth;
             int statusX = 0;
             int gameViewX = statusWidth; // No extra spacing
-            _statusComponent = new StatusComponent(statusX, 0, statusWidth, ConsoleConfig.MainAreaHeight);
-            _gameComponent = new GameViewComponent(gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
-            _commandComponent = new CommandComponent(0, ConsoleConfig.MainAreaHeight, _width, ConsoleConfig.HELP_AREA_HEIGHT);
+            var bounds = (statusX, 0, statusWidth, ConsoleConfig.MainAreaHeight);
+            _leftPanelComponent = new ShipStatusView(_controls, _statusStyle, bounds);
+            var initialMapView = new GalaxyMapView(null!, (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight)); // Will be set with real galaxy in UpdateGameState
+            _gameComponent = new GameView(_controls, _statusStyle) { Map = initialMapView, Panel = _leftPanelComponent };
+            // Place command area at the very bottom, below axis label row
+            int commandY = ConsoleConfig.MainAreaHeight + ConsoleConfig.AXIS_LABEL_HEIGHT;
+            _commandLineView = new CommandLineView(_controls, _statusStyle);
 
             _isInitialized = true;
             Clear();
@@ -80,8 +93,6 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         public void BeginFrame()
         {
             if (!_isInitialized) throw new InvalidOperationException("Renderer not initialized");
-            
-            // Mark all cells as clean for the new frame
             for (int y = 0; y < _height; y++)
             {
                 for (int x = 0; x < _width; x++)
@@ -95,44 +106,35 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         {
             if (!_isInitialized) return;
 
-            // Create buffer writers for each component
             var gameBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
             var statusBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
             var commandBuffer = new ConsoleBufferWriter(_currentBuffer, _width, _height, (0, 0));
 
             // Render all components
             _gameComponent?.Render(gameBuffer);
+
+            // Set CurrentMapView for instructions panel
+            CurrentMapView = _gameComponent?.Map;
+
+            var bounds = (0, 0, ConsoleConfig.StatusAreaWidth, ConsoleConfig.MainAreaHeight);
             if (ShowInstructionsPanel)
             {
-                var instructionsPanel = new InstructionsPanelComponent(_statusComponent.Bounds.X, _statusComponent.Bounds.Y, _statusComponent.Bounds.Width, _statusComponent.Bounds.Height, _controlState);
-                instructionsPanel.Render(statusBuffer);
+                _leftPanelComponent = new InstructionsView(_controls, _instructionsStyle, bounds, _controlState);
+            }
+            else if (CurrentMapView is GalaxyMapView galaxyMap && galaxyMap.SystemUnderCursor != null)
+            {
+                _leftPanelComponent = new SolarSystemStatusView(_controls, _statusStyle, bounds, galaxyMap.SystemUnderCursor);
             }
             else
             {
-                _statusComponent?.Render(statusBuffer);
+                _leftPanelComponent = new ShipStatusView(_controls, _statusStyle, bounds);
             }
-            _commandComponent?.Render(commandBuffer);
-
-            // Draw X axis numbers below the game area (only for GameViewComponent)
-            if (_gameComponent is GameViewComponent gvc)
-            {
-                int numbersY = ConsoleConfig.XAxisLabelRow;
-                int xStart = gvc.LeftBorderX;
-                int maxX = gvc.UsableWidth;
-                int[] xLabels = { 1, 12, 23, 34, 45, 56, 67, 75 };
-                foreach (int x in xLabels)
-                {
-                    int drawX = xStart + x - 1;
-                    string label = x.ToString();
-                    for (int j = 0; j < label.Length; j++)
-                    {
-                        _currentBuffer[drawX + j, numbersY].Character = label[j];
-                        _currentBuffer[drawX + j, numbersY].Foreground = ConsoleColor.White;
-                        _currentBuffer[drawX + j, numbersY].IsDirty = true;
-                    }
-                }
-            }
-
+            if (_leftPanelComponent != null && _currentGameState != null)
+                _leftPanelComponent.Update(_currentGameState);
+            _leftPanelComponent?.Render(statusBuffer);
+            _gameComponent.Panel = _leftPanelComponent;
+            _commandLineView?.Render(commandBuffer);
+        
             // Write changes to console
             var sb = new StringBuilder();
             ConsoleColor currentFg = ConsoleColor.Gray;
@@ -208,13 +210,13 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
         public void UpdateGameState(IGameState gameState)
         {
             _currentGameState = gameState;
-            _gameComponent?.Update(gameState);
-            _statusComponent?.UpdateStatus(gameState);
+            _gameComponent?.Map?.Update(gameState);
+            _leftPanelComponent?.Update(gameState);
         }
 
         public void SetHelpText(string text)
         {
-            _commandComponent?.SetHelpText(text);
+            if (_commandLineView != null) _commandLineView.SetHelpText(text);
         }
 
         public void SetControlState(SpacePirates.Console.Game.Engine.GameEngine.ControlState state)

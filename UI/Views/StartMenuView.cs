@@ -1,8 +1,10 @@
 using System;
+using SpacePirates.Console.UI.Controls;
+using SpacePirates.Console.UI.Styles;
 
-namespace SpacePirates.Console.UI.Components
+namespace SpacePirates.Console.UI.Views
 {
-    public class StartMenuComponent
+    public class StartMenuView : BaseView
     {
         public enum MenuOption { StartNewGame, LoadGame, Quit }
         public MenuOption SelectedOption { get; private set; } = MenuOption.StartNewGame;
@@ -10,24 +12,26 @@ namespace SpacePirates.Console.UI.Components
         private readonly string[] _options = { "Start New Game", "Load Saved Game", "Quit" };
         private readonly bool _loadEnabled;
 
-        public StartMenuComponent(bool loadEnabled = true)
+        public StartMenuView(bool loadEnabled = true)
         {
+            Controls = new MenuControls();
+            StyleProvider = null; // Optionally add a style provider for menu
             _loadEnabled = loadEnabled;
         }
 
         public void Show()
         {
-            System.ConsoleKeyInfo key;
+            ConsoleKeyInfo key;
             do
             {
                 Render();
                 key = System.Console.ReadKey(true);
                 HandleInput(key);
-            } while (key.Key != System.ConsoleKey.Enter || (!_loadEnabled && _selectedIndex == 1));
+            } while (key.Key != ConsoleKey.Enter || (!_loadEnabled && _selectedIndex == 1));
             SelectedOption = (MenuOption)_selectedIndex;
         }
 
-        private void Render()
+        public override void Render()
         {
             System.Console.Clear();
             System.Console.WriteLine("============================");
@@ -37,13 +41,13 @@ namespace SpacePirates.Console.UI.Components
             {
                 if (i == 1 && !_loadEnabled)
                 {
-                    System.Console.ForegroundColor = System.ConsoleColor.DarkGray;
+                    System.Console.ForegroundColor = ConsoleColor.DarkGray;
                     System.Console.WriteLine($"  {_options[i]} (no saves)");
                     System.Console.ResetColor();
                 }
                 else if (i == _selectedIndex)
                 {
-                    System.Console.ForegroundColor = System.ConsoleColor.Cyan;
+                    System.Console.ForegroundColor = ConsoleColor.Cyan;
                     System.Console.WriteLine($"> {_options[i]}");
                     System.Console.ResetColor();
                 }
@@ -55,16 +59,15 @@ namespace SpacePirates.Console.UI.Components
             System.Console.WriteLine("\nUse j,k to move up and down, and Enter to select.");
         }
 
-        private void HandleInput(System.ConsoleKeyInfo key)
+        public override void HandleInput(ConsoleKeyInfo key)
         {
-            int prevIndex = _selectedIndex;
-            if (key.Key == System.ConsoleKey.UpArrow || key.KeyChar == 'k' || key.KeyChar == 'K')
+            if (key.Key == ConsoleKey.UpArrow || key.KeyChar == 'k' || key.KeyChar == 'K')
             {
                 do {
                     _selectedIndex = (_selectedIndex - 1 + _options.Length) % _options.Length;
                 } while (_selectedIndex == 1 && !_loadEnabled);
             }
-            else if (key.Key == System.ConsoleKey.DownArrow || key.KeyChar == 'j' || key.KeyChar == 'J')
+            else if (key.Key == ConsoleKey.DownArrow || key.KeyChar == 'j' || key.KeyChar == 'J')
             {
                 do {
                     _selectedIndex = (_selectedIndex + 1) % _options.Length;

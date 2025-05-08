@@ -11,10 +11,11 @@ namespace SpacePirates.Console.Core.Models.State
         // Layout configuration
         public const int GAME_AREA_WIDTH = 76;  // Main game view width for 1-75
         public const int HELP_AREA_HEIGHT = 2;  // Height of help section at bottom
+        public const int AXIS_LABEL_HEIGHT = 1; // Height for axis labels below the map
         
         // Calculated values
         public static int StatusAreaWidth => DEFAULT_CONSOLE_WIDTH - GAME_AREA_WIDTH - 2;
-        public static int MainAreaHeight => DEFAULT_CONSOLE_HEIGHT - HELP_AREA_HEIGHT;
+        public static int MainAreaHeight => DEFAULT_CONSOLE_HEIGHT - HELP_AREA_HEIGHT - AXIS_LABEL_HEIGHT;
         
         // Usable game area (accounting for borders)
         public static int UsableGameWidth => GAME_AREA_WIDTH - 2;  // -2 for left and right borders (1-75)

@@ -5,9 +5,10 @@ using SpacePirates.API.Models;
 using SpacePirates.Console.UI.InputHandling.CommandSystem;
 using SpacePirates.Console.UI.ConsoleRenderer;
 using System.Text;
-using SpacePirates.Console.UI.Components;
 using System.ComponentModel;
 using System.Linq;
+using SpacePirates.Console.UI.Views;
+using SpacePirates.Console.UI.Controls;
 
 namespace SpacePirates.Console.Game.Engine
 {
@@ -18,7 +19,7 @@ namespace SpacePirates.Console.Game.Engine
         private bool _isRunning;
         private CommandParser? _commandParser;
         private MoveCommand? _moveCommand;
-        private string _defaultHelpText = SpacePirates.Console.UI.Components.CommandComponent.DefaultHelpText;
+        private string _defaultHelpText = "Tab to toggle instructions | ESC to exit";
         private string _lastCommandResult = string.Empty;
         private bool _showInstructions = false;
         private readonly string _instructionsText =
@@ -37,6 +38,9 @@ namespace SpacePirates.Console.Game.Engine
         private ShipTrail _shipTrail = new ShipTrail(12);
         private DateTime _lastShieldChargeUpdate = DateTime.UtcNow;
         private double _shieldChargeProgress = 0;
+        private DateTime _lastHelpTextUpdate = DateTime.MinValue;
+        private double _helpTextTimeoutSeconds = 2.5;
+        private bool _helpTextIsTemporary = false;
         public bool ShowInstructionsPanel => _showInstructionsPanel;
 
         public enum ControlState
@@ -70,9 +74,9 @@ namespace SpacePirates.Console.Game.Engine
             _renderer.SetHelpText(_defaultHelpText);
 
             // Pass trail to GameViewComponent if possible
-            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameViewComponent gvc)
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv)
             {
-                gvc.ShipTrail = _shipTrail;
+                gpv.SetShipTrail(_shipTrail);
             }
         }
 
@@ -93,13 +97,18 @@ namespace SpacePirates.Console.Game.Engine
             // Show the galaxy map as the main component
             if (_renderer is ConsoleRenderer cr && _gameState is GameState gs && gs.Galaxy != null)
             {
-                cr._gameComponent = new SpacePirates.Console.UI.Components.GalaxyMapComponent(gs.Galaxy);
+                if (cr._gameComponent is GameView gpv)
+                {
+                    int gameViewX = ConsoleConfig.StatusAreaWidth;
+                    var bounds = (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
+                    gpv.SetMapView(new GalaxyMapView(gs.Galaxy, bounds));
+                }
             }
 
             // Pass trail to GameViewComponent if possible
-            if (_renderer is ConsoleRenderer cr2 && cr2._gameComponent is GameViewComponent gvc2)
+            if (_renderer is ConsoleRenderer cr2 && cr2._gameComponent is GameView gpv2)
             {
-                gvc2.ShipTrail = _shipTrail;
+                gpv2.SetShipTrail(_shipTrail);
             }
         }
 
@@ -176,15 +185,16 @@ namespace SpacePirates.Console.Game.Engine
 
         private void HandleGalaxyMapInput(ConsoleKeyInfo key)
         {
-            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GalaxyMapComponent galaxyMap)
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv && gpv != null)
             {
+                var mapView = gpv;
                 switch (char.ToLower(key.KeyChar))
                 {
                     case 'h':
                     case 'j':
                     case 'k':
                     case 'l':
-                        galaxyMap.HandleInput(key);
+                        gpv.HandleInput(key);
                         break;
                     case 'w':
                         // Enter warp command mode: prompt for system ID
@@ -246,19 +256,18 @@ namespace SpacePirates.Console.Game.Engine
                                 gs.PlayerShip.Position.Y = system.Y;
                                 // Optionally: gs.CurrentSolarSystem = system; // if you want to track it
                             }
-                            // Switch to GameViewComponent for the solar system view, passing the system
-                            cr._gameComponent = new GameViewComponent(cr._gameComponent.Bounds.X, cr._gameComponent.Bounds.Y, cr._gameComponent.Bounds.Width, cr._gameComponent.Bounds.Height, system);
+                            // Switch to SolarSystemMapView for the solar system view, passing the system
+                            int gameViewX = ConsoleConfig.StatusAreaWidth;
+                            var bounds = (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
+                            gpv.SetMapView(new SolarSystemMapView(system, bounds));
                             cr.SetControlState(ControlState.SolarSystemView);
                             _currentState = ControlState.SolarSystemView;
-                            _renderer.SetHelpText($"Warped to system: {system.Name}");
+                            SetTemporaryHelpText($"Warped to system: {system.Name} (press 'g' to return to galaxy map)");
                             _renderer.EndFrame();
                             return;
                         }
                         // Not found or invalid
                         _renderer.SetHelpText("Invalid system ID. Press any key to return.");
-                        _renderer.EndFrame();
-                        System.Console.ReadKey(true);
-                        _renderer.SetHelpText(_defaultHelpText);
                         _renderer.EndFrame();
                         break;
                     case '\t':
@@ -327,105 +336,140 @@ namespace SpacePirates.Console.Game.Engine
 
         private void HandleSolarSystemInput(ConsoleKeyInfo key)
         {
-            // Only allow m, s, Tab, Esc
-            switch (char.ToLower(key.KeyChar))
+            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv && gpv.Map is SolarSystemMapView ssc)
             {
-                case 'm':
-                    // Start move command
-                    var moveInput = CommandInputLoop("Move: ");
-                    if (!string.IsNullOrWhiteSpace(moveInput))
-                    {
-                        // Accept formats like '12 A', '12A', '12,a', '12a', etc.
-                        moveInput = moveInput.Replace(",", " ").Replace("-", " ").Trim();
-                        string xPart = string.Empty, yPart = string.Empty;
-                        var parts = moveInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length == 2)
+                switch (char.ToLower(key.KeyChar))
+                {
+                    case 'h':
+                    case 'j':
+                    case 'k':
+                    case 'l':
+                        ssc.HandleInput(key); // Move the cursor in the solar system map
+                        break;
+                    case 'g':
+                        // Switch back to galaxy map
+                        if (_gameState is GameState gs && gs.Galaxy != null)
                         {
-                            xPart = parts[0];
-                            yPart = parts[1];
+                            int gameViewX = ConsoleConfig.StatusAreaWidth;
+                            var bounds = (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
+                            gpv.SetMapView(new GalaxyMapView(gs.Galaxy, bounds));
+                            cr.SetControlState(ControlState.GalaxyMap);
+                            _currentState = ControlState.GalaxyMap;
+                            SetTemporaryHelpText("Galaxy map view (use hjkl to move, w to warp)");
+                            _renderer.EndFrame();
                         }
-                        else if (parts.Length == 1)
+                        break;
+                    case 'm':
+                    case 's':
+                    case '\t':
+                    case (char)27: // ESC
+                        // Keep existing logic for these keys
+                        break;
+                }
+            }
+            else
+            {
+                // Fallback to old logic if not using SolarSystemComponent
+                // Only allow m, s, Tab, Esc
+                switch (char.ToLower(key.KeyChar))
+                {
+                    case 'm':
+                        // Start move command
+                        var moveInput = CommandInputLoop("Move: ");
+                        if (!string.IsNullOrWhiteSpace(moveInput))
                         {
-                            // Try to split number and letter, e.g. 12A
-                            var s = parts[0];
-                            int i = 0;
-                            while (i < s.Length && char.IsDigit(s[i])) i++;
-                            if (i > 0 && i < s.Length)
+                            // Accept formats like '12 A', '12A', '12,a', '12a', etc.
+                            moveInput = moveInput.Replace(",", " ").Replace("-", " ").Trim();
+                            string xPart = string.Empty, yPart = string.Empty;
+                            var parts = moveInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length == 2)
                             {
-                                xPart = s.Substring(0, i);
-                                yPart = s.Substring(i);
+                                xPart = parts[0];
+                                yPart = parts[1];
                             }
-                        }
-                        if (int.TryParse(xPart, out int x) && yPart.Length == 1 && char.IsLetter(yPart[0]))
-                        {
-                            int y = char.ToUpper(yPart[0]) - 'A' + 1;
-                            MoveShipTo(x, y);
+                            else if (parts.Length == 1)
+                            {
+                                // Try to split number and letter, e.g. 12A
+                                var s = parts[0];
+                                int i = 0;
+                                while (i < s.Length && char.IsDigit(s[i])) i++;
+                                if (i > 0 && i < s.Length)
+                                {
+                                    xPart = s.Substring(0, i);
+                                    yPart = s.Substring(i);
+                                }
+                            }
+                            if (int.TryParse(xPart, out int x) && yPart.Length == 1 && char.IsLetter(yPart[0]))
+                            {
+                                int y = char.ToUpper(yPart[0]) - 'A' + 1;
+                                MoveShipTo(x, y);
+                            }
+                            else
+                            {
+                                _renderer.SetHelpText("Invalid coordinates. Use: x y (e.g. 12 A or 12A)");
+                                _renderer.EndFrame();
+                                Thread.Sleep(1200);
+                                _renderer.SetHelpText(_defaultHelpText);
+                            }
                         }
                         else
                         {
-                            _renderer.SetHelpText("Invalid coordinates. Use: x y (e.g. 12 A or 12A)");
-                            _renderer.EndFrame();
-                            Thread.Sleep(1200);
                             _renderer.SetHelpText(_defaultHelpText);
-                        }
-                    }
-                    else
-                    {
-                        _renderer.SetHelpText(_defaultHelpText);
-                        _renderer.EndFrame();
-                    }
-                    break;
-                case 's':
-                    // Toggle shield with charging animation
-                    if (_gameState?.PlayerShip?.Shield != null)
-                    {
-                        var shield = _gameState.PlayerShip.Shield;
-                        if (!shield.IsActive && !shield.Charging)
-                        {
-                            shield.Charging = true;
-                            shield.CurrentIntegrity = 0;
-                            _renderer.SetHelpText("Shield charging...");
                             _renderer.EndFrame();
-                            int maxCapacity = shield.CalculateMaxCapacity();
-                            int chargeSteps = 20;
-                            int msPerStep = 10000 / chargeSteps;
-                            for (int i = 1; i <= chargeSteps; i++)
+                        }
+                        break;
+                    case 's':
+                        // Toggle shield with charging animation
+                        if (_gameState?.PlayerShip?.Shield != null)
+                        {
+                            var shield = _gameState.PlayerShip.Shield;
+                            if (!shield.IsActive && !shield.Charging)
                             {
-                                shield.CurrentIntegrity = (int)(maxCapacity * (i / (double)chargeSteps));
-                                _renderer.SetHelpText($"Shield charging... {shield.CurrentIntegrity * 100 / maxCapacity}%");
+                                shield.Charging = true;
+                                shield.CurrentIntegrity = 0;
+                                _renderer.SetHelpText("Shield charging...");
                                 _renderer.EndFrame();
-                                Thread.Sleep(msPerStep);
+                                int maxCapacity = shield.CalculateMaxCapacity();
+                                int chargeSteps = 20;
+                                int msPerStep = 10000 / chargeSteps;
+                                for (int i = 1; i <= chargeSteps; i++)
+                                {
+                                    shield.CurrentIntegrity = (int)(maxCapacity * (i / (double)chargeSteps));
+                                    _renderer.SetHelpText($"Shield charging... {shield.CurrentIntegrity * 100 / maxCapacity}%");
+                                    _renderer.EndFrame();
+                                    Thread.Sleep(msPerStep);
+                                }
+                                shield.CurrentIntegrity = maxCapacity;
+                                shield.IsActive = true;
+                                shield.Charging = false;
+                                _renderer.SetHelpText("Shield fully charged!");
+                                _renderer.EndFrame();
+                                Thread.Sleep(800);
+                                _renderer.SetHelpText(_defaultHelpText);
                             }
-                            shield.CurrentIntegrity = maxCapacity;
-                            shield.IsActive = true;
-                            shield.Charging = false;
-                            _renderer.SetHelpText("Shield fully charged!");
-                            _renderer.EndFrame();
-                            Thread.Sleep(800);
-                            _renderer.SetHelpText(_defaultHelpText);
+                            else if (shield.IsActive && !shield.Charging)
+                            {
+                                shield.IsActive = false;
+                                shield.CurrentIntegrity = 0;
+                                _renderer.SetHelpText("Shield deactivated!");
+                                _renderer.EndFrame();
+                                Thread.Sleep(800);
+                                _renderer.SetHelpText(_defaultHelpText);
+                            }
                         }
-                        else if (shield.IsActive && !shield.Charging)
-                        {
-                            shield.IsActive = false;
-                            shield.CurrentIntegrity = 0;
-                            _renderer.SetHelpText("Shield deactivated!");
-                            _renderer.EndFrame();
-                            Thread.Sleep(800);
-                            _renderer.SetHelpText(_defaultHelpText);
-                        }
-                    }
-                    break;
-                case '\t':
-                    _showInstructionsPanel = !_showInstructionsPanel;
-                    if (_renderer is ConsoleRenderer cr2)
-                        cr2.ShowInstructionsPanel = _showInstructionsPanel;
-                    _renderer.EndFrame();
-                    break;
-                case (char)27: // ESC
-                    _showQuitConfirm = true;
-                    _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
-                    _renderer.EndFrame();
-                    break;
+                        break;
+                    case '\t':
+                        _showInstructionsPanel = !_showInstructionsPanel;
+                        if (_renderer is ConsoleRenderer cr2)
+                            cr2.ShowInstructionsPanel = _showInstructionsPanel;
+                        _renderer.EndFrame();
+                        break;
+                    case (char)27: // ESC
+                        _showQuitConfirm = true;
+                        _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
+                        _renderer.EndFrame();
+                        break;
+                }
             }
         }
 
@@ -452,15 +496,7 @@ namespace SpacePirates.Console.Game.Engine
                     ship.Shield.CurrentIntegrity = maxCapacity;
                     ship.Shield.IsActive = true;
                     ship.Shield.Charging = false;
-                    _renderer.SetHelpText("Shield fully charged!");
-                    // Hide message after 2.5s
-                    var restoreTime = DateTime.Now + TimeSpan.FromSeconds(2.5);
-                    while (DateTime.Now < restoreTime)
-                    {
-                        Thread.Sleep(50);
-                        if (System.Console.KeyAvailable) break;
-                    }
-                    _renderer.SetHelpText(_defaultHelpText);
+                    SetTemporaryHelpText("Shield fully charged!");
                 }
             }
 
@@ -469,6 +505,16 @@ namespace SpacePirates.Console.Game.Engine
             
             // Update renderer with new state
             _renderer.UpdateGameState(_gameState);
+
+            // Restore default help text if a temporary message was set and timeout expired
+            if (_helpTextIsTemporary && !_isCommandMode)
+            {
+                if ((DateTime.UtcNow - _lastHelpTextUpdate).TotalSeconds > _helpTextTimeoutSeconds)
+                {
+                    _renderer.SetHelpText(_defaultHelpText);
+                    _helpTextIsTemporary = false;
+                }
+            }
         }
 
         private void Render()
@@ -480,6 +526,15 @@ namespace SpacePirates.Console.Game.Engine
         public void Stop()
         {
             _isRunning = false;
+        }
+
+        // Utility to set help text with optional timeout
+        private void SetTemporaryHelpText(string text, double timeoutSeconds = 2.5)
+        {
+            _renderer.SetHelpText(text);
+            _lastHelpTextUpdate = DateTime.UtcNow;
+            _helpTextTimeoutSeconds = timeoutSeconds;
+            _helpTextIsTemporary = true;
         }
 
         // Add MoveShipTo for command logic
@@ -499,7 +554,7 @@ namespace SpacePirates.Console.Game.Engine
                     _renderer.EndFrame();
                 },
                 (msg) => {
-                    _renderer.SetHelpText(msg);
+                    SetTemporaryHelpText(msg);
                     _renderer.EndFrame();
                 },
                 _shipTrail

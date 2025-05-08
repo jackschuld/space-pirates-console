@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using SpacePirates.API.Models;
 using SpacePirates.API.Models.ShipComponents;
+using SpacePirates.Console.UI.Views;
 
 namespace SpacePirates.Console;
 
@@ -36,12 +37,12 @@ public class Program
         bool hasSave = savedGames.Count > 0;
 
         // Show start menu (disable Load if no saves)
-        var startMenu = new StartMenuComponent(hasSave);
+        var startMenu = new StartMenuView(hasSave);
         startMenu.Show();
 
         switch (startMenu.SelectedOption)
         {
-            case StartMenuComponent.MenuOption.StartNewGame:
+            case StartMenuView.MenuOption.StartNewGame:
                 if (hasSave)
                 {
                     // Overwrite: delete old save
@@ -63,7 +64,7 @@ public class Program
                 engine.Initialize(gameState);
                 engine.Run();
                 break;
-            case StartMenuComponent.MenuOption.LoadGame:
+            case StartMenuView.MenuOption.LoadGame:
                 if (!hasSave)
                 {
                     System.Console.WriteLine("No saved games to load.");
@@ -82,7 +83,7 @@ public class Program
                 engine2.Initialize(gameState2);
                 engine2.Run();
                 break;
-            case StartMenuComponent.MenuOption.Quit:
+            case StartMenuView.MenuOption.Quit:
                 System.Console.WriteLine("Goodbye!");
                 return;
         }
