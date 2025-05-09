@@ -4,7 +4,7 @@ using SpacePirates.Console.UI.Styles;
 using SpacePirates.Console.UI.Components;
 using System;
 
-namespace SpacePirates.Console.UI.Views
+namespace SpacePirates.Console.UI.Views.Map
 {
     public abstract class MapView : BaseView, IGameComponent, SpacePirates.Console.UI.Interfaces.IHasInstructions
     {
@@ -37,9 +37,6 @@ namespace SpacePirates.Console.UI.Views
                     break;
                 case 'j':
                     _cursorY = Math.Min(_bounds.Y + _bounds.Height - 2, _cursorY + 1);
-                    break;
-                case 'd':
-                    _showDetails = !_showDetails;
                     break;
             }
         }

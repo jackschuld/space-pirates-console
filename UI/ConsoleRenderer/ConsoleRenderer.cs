@@ -4,6 +4,7 @@ using SpacePirates.Console.UI.Components;
 using SpacePirates.Console.UI.Views;
 using SpacePirates.Console.UI.Controls;
 using SpacePirates.Console.UI.Styles;
+using SpacePirates.Console.UI.Views.Map;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -224,6 +225,11 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
             _controlState = state;
         }
 
+        public void SetTemporaryNotification(string message)
+        {
+            _commandLineView?.SetTemporaryMessage(message);
+        }
+
         private static int GetColorCode(ConsoleColor color)
         {
             return color switch
@@ -256,6 +262,11 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
                 System.Console.ResetColor();
                 System.Console.Clear();
             }
+        }
+
+        public CommandLineView? GetCommandLineView()
+        {
+            return _commandLineView;
         }
     }
 } 

@@ -26,6 +26,8 @@ namespace SpacePirates.Console.UI.Views
             }
 
             buffer.DrawString(textX, y++, $"Name: {_system.Name}", ConsoleColor.Cyan);
+            string hexId = _system.Name.Contains("-") ? _system.Name[( _system.Name.LastIndexOf('-') + 1 )..] : _system.Name;
+            buffer.DrawString(textX, y++, $"ID: {hexId}", ConsoleColor.Yellow);
             buffer.DrawString(textX, y++, $"Sun: {_system.SunType}", ConsoleColor.Yellow);
             buffer.DrawString(textX, y++, $"Planets: {_system.Planets.Count}", PanelStyles.CommandTextColor);
             foreach (var planet in _system.Planets)

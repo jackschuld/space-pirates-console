@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Linq;
 using SpacePirates.Console.UI.Views;
 using SpacePirates.Console.UI.Controls;
+using SpacePirates.Console.UI.Views.Map;
 
 namespace SpacePirates.Console.Game.Engine
 {
@@ -102,6 +103,7 @@ namespace SpacePirates.Console.Game.Engine
                     int gameViewX = ConsoleConfig.StatusAreaWidth;
                     var bounds = (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
                     gpv.SetMapView(new GalaxyMapView(gs.Galaxy, bounds));
+                    gpv.Controls = new GalaxyControls();
                 }
             }
 
@@ -187,101 +189,7 @@ namespace SpacePirates.Console.Game.Engine
         {
             if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv && gpv != null)
             {
-                var mapView = gpv;
-                switch (char.ToLower(key.KeyChar))
-                {
-                    case 'h':
-                    case 'j':
-                    case 'k':
-                    case 'l':
-                        gpv.HandleInput(key);
-                        break;
-                    case 'w':
-                        // Enter warp command mode: prompt for system ID
-                        _renderer.SetHelpText("Enter system ID to warp to:");
-                        _renderer.EndFrame();
-                        string input = string.Empty;
-                        bool done = false;
-                        while (!done)
-                        {
-                            if (System.Console.KeyAvailable)
-                            {
-                                var warpKey = System.Console.ReadKey(true);
-                                if (warpKey.Key == ConsoleKey.Enter)
-                                {
-                                    done = true;
-                                }
-                                else if (warpKey.Key == ConsoleKey.Escape)
-                                {
-                                    _renderer.SetHelpText(_defaultHelpText);
-                                    _renderer.EndFrame();
-                                    return;
-                                }
-                                else if (warpKey.Key == ConsoleKey.Backspace)
-                                {
-                                    if (input.Length > 0)
-                                        input = input.Substring(0, input.Length - 1);
-                                }
-                                else if (!char.IsControl(warpKey.KeyChar))
-                                {
-                                    input += warpKey.KeyChar;
-                                }
-                                _renderer.SetHelpText($"Enter system ID to warp to: {input}");
-                                _renderer.EndFrame();
-                            }
-                        }
-                        // Try to find the solar system by ID or name
-                        var galaxy = (_gameState as GameState)?.Galaxy;
-                        SolarSystem? system = null;
-                        if (galaxy != null)
-                        {
-                            // Try by decimal ID
-                            if (int.TryParse(input, out int decId))
-                                system = galaxy.SolarSystems.FirstOrDefault(s => s.Id == decId);
-
-                            // Try by hex ID (last 4 chars of name)
-                            if (system == null && int.TryParse(input, System.Globalization.NumberStyles.HexNumber, null, out int hexId))
-                                system = galaxy.SolarSystems.FirstOrDefault(s => s.Id.ToString("x4").Equals(input, StringComparison.OrdinalIgnoreCase));
-
-                            // Try by name (case-insensitive, full or last 4 chars)
-                            if (system == null)
-                                system = galaxy.SolarSystems.FirstOrDefault(s => s.Name.EndsWith(input, StringComparison.OrdinalIgnoreCase) || s.Name.Equals(input, StringComparison.OrdinalIgnoreCase));
-                        }
-                        if (system != null)
-                        {
-                            // Move ship to the solar system's coordinates
-                            if (_gameState is GameState gs)
-                            {
-                                gs.PlayerShip.Position.X = system.X;
-                                gs.PlayerShip.Position.Y = system.Y;
-                                // Optionally: gs.CurrentSolarSystem = system; // if you want to track it
-                            }
-                            // Switch to SolarSystemMapView for the solar system view, passing the system
-                            int gameViewX = ConsoleConfig.StatusAreaWidth;
-                            var bounds = (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
-                            gpv.SetMapView(new SolarSystemMapView(system, bounds));
-                            cr.SetControlState(ControlState.SolarSystemView);
-                            _currentState = ControlState.SolarSystemView;
-                            SetTemporaryHelpText($"Warped to system: {system.Name} (press 'g' to return to galaxy map)");
-                            _renderer.EndFrame();
-                            return;
-                        }
-                        // Not found or invalid
-                        _renderer.SetHelpText("Invalid system ID. Press any key to return.");
-                        _renderer.EndFrame();
-                        break;
-                    case '\t':
-                        _showInstructionsPanel = !_showInstructionsPanel;
-                        if (_renderer is ConsoleRenderer cr2)
-                            cr2.ShowInstructionsPanel = _showInstructionsPanel;
-                        _renderer.EndFrame();
-                        break;
-                    case (char)27: // ESC
-                        _showQuitConfirm = true;
-                        _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
-                        _renderer.EndFrame();
-                        break;
-                }
+                gpv.HandleInput(key);
             }
         }
 
@@ -338,34 +246,7 @@ namespace SpacePirates.Console.Game.Engine
         {
             if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv && gpv.Map is SolarSystemMapView ssc)
             {
-                switch (char.ToLower(key.KeyChar))
-                {
-                    case 'h':
-                    case 'j':
-                    case 'k':
-                    case 'l':
-                        ssc.HandleInput(key); // Move the cursor in the solar system map
-                        break;
-                    case 'g':
-                        // Switch back to galaxy map
-                        if (_gameState is GameState gs && gs.Galaxy != null)
-                        {
-                            int gameViewX = ConsoleConfig.StatusAreaWidth;
-                            var bounds = (gameViewX, 0, ConsoleConfig.GAME_AREA_WIDTH, ConsoleConfig.MainAreaHeight);
-                            gpv.SetMapView(new GalaxyMapView(gs.Galaxy, bounds));
-                            cr.SetControlState(ControlState.GalaxyMap);
-                            _currentState = ControlState.GalaxyMap;
-                            SetTemporaryHelpText("Galaxy map view (use hjkl to move, w to warp)");
-                            _renderer.EndFrame();
-                        }
-                        break;
-                    case 'm':
-                    case 's':
-                    case '\t':
-                    case (char)27: // ESC
-                        // Keep existing logic for these keys
-                        break;
-                }
+                gpv.HandleInput(key);
             }
             else
             {
@@ -458,17 +339,6 @@ namespace SpacePirates.Console.Game.Engine
                             }
                         }
                         break;
-                    case '\t':
-                        _showInstructionsPanel = !_showInstructionsPanel;
-                        if (_renderer is ConsoleRenderer cr2)
-                            cr2.ShowInstructionsPanel = _showInstructionsPanel;
-                        _renderer.EndFrame();
-                        break;
-                    case (char)27: // ESC
-                        _showQuitConfirm = true;
-                        _renderer.SetHelpText("Are you sure you want to quit? (y/n)");
-                        _renderer.EndFrame();
-                        break;
                 }
             }
         }
@@ -505,6 +375,13 @@ namespace SpacePirates.Console.Game.Engine
             
             // Update renderer with new state
             _renderer.UpdateGameState(_gameState);
+
+            // Update the command line view for temporary message timeout
+            if (_renderer is ConsoleRenderer cr)
+            {
+                var cmdLine = cr.GetCommandLineView();
+                cmdLine?.Update();
+            }
 
             // Restore default help text if a temporary message was set and timeout expired
             if (_helpTextIsTemporary && !_isCommandMode)
@@ -560,5 +437,28 @@ namespace SpacePirates.Console.Game.Engine
                 _shipTrail
             );
         }
+
+        public SolarSystem? FindSolarSystem(string input)
+        {
+            if (_gameState?.Galaxy == null) return null;
+            if (int.TryParse(input, out int id))
+                return _gameState.Galaxy.SolarSystems.Find(s => s.Id == id);
+
+            // Try exact match
+            var exact = _gameState.Galaxy.SolarSystems.Find(s => s.Name.Equals(input, StringComparison.OrdinalIgnoreCase));
+            if (exact != null) return exact;
+
+            // Try ends-with match for hex suffix after dash
+            var endsWith = _gameState.Galaxy.SolarSystems.Find(s =>
+                s.Name.Contains("-") &&
+                s.Name.Substring(s.Name.LastIndexOf('-') + 1).Equals(input, StringComparison.OrdinalIgnoreCase));
+            if (endsWith != null) return endsWith;
+
+            // Try contains match
+            return _gameState.Galaxy.SolarSystems.Find(s => s.Name.IndexOf(input, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        public Galaxy? CurrentGalaxy => _gameState?.Galaxy;
+        public ShipTrail? CurrentShipTrail => _shipTrail;
     }
 } 

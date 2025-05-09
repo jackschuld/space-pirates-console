@@ -2,6 +2,7 @@ using SpacePirates.Console.UI.Controls;
 using SpacePirates.Console.UI.Styles;
 using SpacePirates.Console.Core.Models.Movement;
 using SpacePirates.Console.Core.Interfaces;
+using SpacePirates.Console.UI.Views.Map;
 
 namespace SpacePirates.Console.UI.Views
 {
@@ -53,6 +54,30 @@ namespace SpacePirates.Console.UI.Views
         public void SetShipTrail(ShipTrail? trail)
         {
             ShipTrail = trail;
+            if (Map is SpacePirates.Console.UI.Views.SolarSystemMapView ssmv)
+            {
+                ssmv.SetShipTrail(trail);
+            }
+        }
+
+        public void SwitchToSolarSystem(SpacePirates.API.Models.SolarSystem system, ShipTrail? trail = null)
+        {
+            int gameViewX = SpacePirates.Console.Core.Models.State.ConsoleConfig.StatusAreaWidth;
+            var bounds = (gameViewX, 0, SpacePirates.Console.Core.Models.State.ConsoleConfig.GAME_AREA_WIDTH, SpacePirates.Console.Core.Models.State.ConsoleConfig.MainAreaHeight);
+            var ssmv = new SpacePirates.Console.UI.Views.SolarSystemMapView(system, bounds);
+            SetMapView(ssmv);
+            Controls = new SpacePirates.Console.UI.Controls.SolarSystemControls();
+            if (trail != null) ssmv.SetShipTrail(trail);
+        }
+
+        public void SwitchToGalaxy(SpacePirates.API.Models.Galaxy galaxy, ShipTrail? trail = null)
+        {
+            int gameViewX = SpacePirates.Console.Core.Models.State.ConsoleConfig.StatusAreaWidth;
+            var bounds = (gameViewX, 0, SpacePirates.Console.Core.Models.State.ConsoleConfig.GAME_AREA_WIDTH, SpacePirates.Console.Core.Models.State.ConsoleConfig.MainAreaHeight);
+            var gmv = new SpacePirates.Console.UI.Views.Map.GalaxyMapView(galaxy, bounds);
+            SetMapView(gmv);
+            Controls = new SpacePirates.Console.UI.Controls.GalaxyControls();
+            // Optionally set trail if needed
         }
     }
 } 

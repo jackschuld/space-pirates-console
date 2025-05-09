@@ -14,6 +14,9 @@ namespace SpacePirates.Console.UI.Views
         private string _temporaryMessage = string.Empty;
         private CommandBarMode _mode = CommandBarMode.Help;
         private bool _showCursor = true;
+        private DateTime? _temporaryMessageSetTime = null;
+        private TimeSpan _temporaryMessageDuration = TimeSpan.FromSeconds(5);
+        private string _defaultHelpText = "Tab to toggle instructions | ESC to exit";
 
         public CommandLineView(BaseControls controls, BaseStyleProvider styleProvider)
         {
@@ -38,6 +41,7 @@ namespace SpacePirates.Console.UI.Views
         {
             _temporaryMessage = message;
             _mode = CommandBarMode.TemporaryMessage;
+            _temporaryMessageSetTime = DateTime.UtcNow;
         }
 
         public void SetMode(CommandBarMode mode)
@@ -88,6 +92,18 @@ namespace SpacePirates.Console.UI.Views
                     if (!string.IsNullOrEmpty(_temporaryMessage))
                         buffer.DrawString(textX, y, _temporaryMessage, PanelStyles.CommandTextColor, ConsoleColor.Black);
                     break;
+            }
+        }
+
+        public void Update()
+        {
+            if (_mode == CommandBarMode.TemporaryMessage && _temporaryMessageSetTime.HasValue)
+            {
+                if (DateTime.UtcNow - _temporaryMessageSetTime.Value > _temporaryMessageDuration)
+                {
+                    SetHelpText(_defaultHelpText);
+                    _temporaryMessageSetTime = null;
+                }
             }
         }
     }

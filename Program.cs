@@ -59,8 +59,10 @@ public class Program
                     return;
                 }
                 var renderer = new ConsoleRenderer();
+                AppDomain.CurrentDomain.SetData("ConsoleRenderer", renderer);
                 var gameState = MapToCoreGameState(newGame);
                 var engine = new GameEngine(renderer);
+                AppDomain.CurrentDomain.SetData("GameEngine", engine);
                 engine.Initialize(gameState);
                 engine.Run();
                 break;
@@ -78,8 +80,10 @@ public class Program
                     return;
                 }
                 var renderer2 = new ConsoleRenderer();
+                AppDomain.CurrentDomain.SetData("ConsoleRenderer", renderer2);
                 var gameState2 = MapToCoreGameState(game);
                 var engine2 = new GameEngine(renderer2);
+                AppDomain.CurrentDomain.SetData("GameEngine", engine2);
                 engine2.Initialize(gameState2);
                 engine2.Run();
                 break;

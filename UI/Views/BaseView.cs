@@ -6,7 +6,7 @@ namespace SpacePirates.Console.UI.Views
 {
     public abstract class BaseView : IView
     {
-        public BaseControls? Controls { get; protected set; }
+        public BaseControls? Controls { get; set; }
         public BaseStyleProvider? StyleProvider { get; protected set; }
 
         public abstract void Render();
