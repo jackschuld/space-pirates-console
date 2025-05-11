@@ -17,18 +17,19 @@ namespace SpacePirates.Console.UI.Controls
                     var trailProp = engine.GetType().GetProperty("CurrentShipTrail");
                     var renderer = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
                     var setHelpText = renderer?.GetType().GetMethod("SetHelpText");
+                    var showMessage = renderer?.GetType().GetMethod("ShowMessage");
                     var endFrame = renderer?.GetType().GetMethod("EndFrame");
                     var galaxy = galaxyProp?.GetValue(engine) as SpacePirates.API.Models.Galaxy;
                     var trail = trailProp?.GetValue(engine) as SpacePirates.Console.Core.Models.Movement.ShipTrail;
                     if (galaxy != null && view is SpacePirates.Console.UI.Views.GameView gameView)
                     {
                         gameView.SwitchToGalaxy(galaxy, trail);
-                        setHelpText?.Invoke(renderer, new object[] { $"Returned to galaxy view." });
+                        showMessage?.Invoke(renderer, new object[] { $"Returned to galaxy view.", true });
                         endFrame?.Invoke(renderer, null);
                     }
                     else
                     {
-                        setHelpText?.Invoke(renderer, new object[] { $"Galaxy not found." });
+                        showMessage?.Invoke(renderer, new object[] { $"Galaxy not found.", true });
                         endFrame?.Invoke(renderer, null);
                     }
                     break;
@@ -69,8 +70,8 @@ namespace SpacePirates.Console.UI.Controls
                         else
                         {
                             var rendererM = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
-                            var setHelpTextM = rendererM?.GetType().GetMethod("SetHelpText");
-                            setHelpTextM?.Invoke(rendererM, new object[] { "Invalid coordinates. Use: x y (e.g. 12 A or 12A)" });
+                            var showMessageM = rendererM?.GetType().GetMethod("ShowMessage");
+                            showMessageM?.Invoke(rendererM, new object[] { "Invalid coordinates. Use: x y (e.g. 12 A or 12A)", true });
                         }
                     }
                     break;
@@ -81,6 +82,7 @@ namespace SpacePirates.Console.UI.Controls
                     var gameStateProp = engineS.GetType().GetField("_gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     var rendererS = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
                     var setHelpTextS = rendererS?.GetType().GetMethod("SetHelpText");
+                    var showMessageS = rendererS?.GetType().GetMethod("ShowMessage");
                     var endFrameS = rendererS?.GetType().GetMethod("EndFrame");
                     var gameState = gameStateProp?.GetValue(engineS);
                     var playerShipProp = gameState?.GetType().GetProperty("PlayerShip");
@@ -99,7 +101,7 @@ namespace SpacePirates.Console.UI.Controls
                         {
                             chargingProp.SetValue(shield, true);
                             currentIntegrityProp.SetValue(shield, 0);
-                            setHelpTextS?.Invoke(rendererS, new object[] { "Shield charging..." });
+                            showMessageS?.Invoke(rendererS, new object[] { "Shield charging...", false });
                             endFrameS?.Invoke(rendererS, null);
                             int maxCapacity = (int)calcMaxCapMethod.Invoke(shield, null)!;
                             int chargeSteps = 20;
@@ -107,27 +109,27 @@ namespace SpacePirates.Console.UI.Controls
                             for (int i = 1; i <= chargeSteps; i++)
                             {
                                 currentIntegrityProp.SetValue(shield, (int)(maxCapacity * (i / (double)chargeSteps)));
-                                setHelpTextS?.Invoke(rendererS, new object[] { $"Shield charging... {((int)currentIntegrityProp.GetValue(shield)! * 100 / maxCapacity)}%" });
+                                showMessageS?.Invoke(rendererS, new object[] { $"Shield charging... {((int)currentIntegrityProp.GetValue(shield)! * 100 / maxCapacity)}%", false });
                                 endFrameS?.Invoke(rendererS, null);
                                 System.Threading.Thread.Sleep(msPerStep);
                             }
                             currentIntegrityProp.SetValue(shield, maxCapacity);
                             isActiveProp.SetValue(shield, true);
                             chargingProp.SetValue(shield, false);
-                            setHelpTextS?.Invoke(rendererS, new object[] { "Shield fully charged!" });
+                            showMessageS?.Invoke(rendererS, new object[] { "Shield fully charged!", true });
                             endFrameS?.Invoke(rendererS, null);
                             System.Threading.Thread.Sleep(800);
-                            setHelpTextS?.Invoke(rendererS, new object[] { "Tab to toggle instructions | ESC to exit" });
+                            showMessageS?.Invoke(rendererS, new object[] { "Tab to toggle instructions | ESC to exit", false });
                             endFrameS?.Invoke(rendererS, null);
                         }
                         else if (isActive && !charging)
                         {
                             isActiveProp.SetValue(shield, false);
                             currentIntegrityProp.SetValue(shield, 0);
-                            setHelpTextS?.Invoke(rendererS, new object[] { "Shield deactivated!" });
+                            showMessageS?.Invoke(rendererS, new object[] { "Shield deactivated!", true });
                             endFrameS?.Invoke(rendererS, null);
                             System.Threading.Thread.Sleep(800);
-                            setHelpTextS?.Invoke(rendererS, new object[] { "Tab to toggle instructions | ESC to exit" });
+                            showMessageS?.Invoke(rendererS, new object[] { "Tab to toggle instructions | ESC to exit", false });
                             endFrameS?.Invoke(rendererS, null);
                         }
                     }

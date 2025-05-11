@@ -5,7 +5,7 @@ namespace SpacePirates.Console.UI.Controls
 {
     public class GalaxyControls : GameControls
     {
-        public override void HandleInput(ConsoleKeyInfo key, BaseView view)
+        public override async void HandleInput(ConsoleKeyInfo key, BaseView view)
         {
             if (char.ToLower(key.KeyChar) == 'w')
             {
@@ -25,7 +25,20 @@ namespace SpacePirates.Console.UI.Controls
                     var trail = trailProp?.GetValue(engine);
                     if (system != null && view is SpacePirates.Console.UI.Views.GameView gameView)
                     {
+                        System.Console.WriteLine($"[DEBUG] SolarSystem: {system}");
+                        if (((SpacePirates.API.Models.SolarSystem)system).Star == null)
+                            System.Console.WriteLine("[DEBUG] Star property is null!");
+                        else
+                            System.Console.WriteLine($"[DEBUG] Star.Id: {((SpacePirates.API.Models.SolarSystem)system).Star.Id}");
                         gameView.SwitchToSolarSystem((SpacePirates.API.Models.SolarSystem)system, (SpacePirates.Console.Core.Models.Movement.ShipTrail?)trail);
+                        var api = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
+                        var starId = ((SpacePirates.API.Models.SolarSystem)system).Star?.Id;
+                        System.Console.WriteLine($"[DEBUG] ApiClient is {(api == null ? "null" : "not null")}, starId={starId}");
+                        if (api != null && starId != null)
+                        {
+                            var result = api.DiscoverStarAsync(starId.Value).GetAwaiter().GetResult();
+                            System.Console.WriteLine($"[DEBUG] DiscoverStarAsync result: {result}");
+                        }
                         var setTempNotif = renderer?.GetType().GetMethod("SetTemporaryNotification");
                         setTempNotif?.Invoke(renderer, new object[] { $"Warped to {((SpacePirates.API.Models.SolarSystem)system).Name}!" });
                         endFrame?.Invoke(renderer, null);

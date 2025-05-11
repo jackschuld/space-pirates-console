@@ -1,8 +1,7 @@
-namespace SpacePirates.Console.UI.Interfaces
+namespace SpacePirates.Console.UI.Views
 {
     public interface IView
     {
-        void Render();
-        void HandleInput(ConsoleKeyInfo key);
+        // ... existing code ...
     }
 } 

@@ -17,6 +17,7 @@ namespace SpacePirates.Console.UI.Components
         {
             _baseUrl = baseUrl.TrimEnd('/');
             _http = new HttpClient();
+            System.Console.WriteLine($"[DEBUG] ApiClient baseUrl: {_baseUrl}");
         }
 
         public async Task<List<GameSummary>> ListGamesAsync()
@@ -63,6 +64,22 @@ namespace SpacePirates.Console.UI.Components
         {
             var resp = await _http.DeleteAsync($"{_baseUrl}/api/game/{gameId}");
             return resp.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DiscoverStarAsync(int starId)
+        {
+            try
+            {
+                System.Console.WriteLine($"[DEBUG] Sending POST to {_baseUrl}/api/game/discover-star/{starId}");
+                var resp = await _http.PostAsync($"{_baseUrl}/api/game/discover-star/{starId}", null);
+                System.Console.WriteLine($"[DEBUG] DiscoverStarAsync status: {resp.StatusCode}");
+                return resp.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[ERROR] DiscoverStarAsync exception: {ex.Message}");
+                return false;
+            }
         }
     }
 

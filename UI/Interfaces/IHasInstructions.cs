@@ -1,4 +1,4 @@
-namespace SpacePirates.Console.UI.Interfaces
+namespace SpacePirates.Console.UI.Views
 {
     public interface IHasInstructions
     {

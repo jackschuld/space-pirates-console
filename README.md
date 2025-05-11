@@ -50,7 +50,7 @@ SpacePirates.Console/
   - **ConsoleRenderer/**: Console rendering logic (e.g., `ConsoleRenderer`, `ConsoleBufferWriter`, `ConsoleBuffer`).
   - **InputHandling/**: Command system and input handlers (e.g., `CommandParser`, `CommandContext`, `MoveCommand`, etc.).
   - **Interfaces/**: UI-specific interfaces (e.g., `IView`, `IHasInstructions`).
-  - **Utils/**: UI helpers (e.g., `StatusComponentHelpers`).
+  - **Utils/**: UI helpers (e.g., `ShipStatusHelper`).
 
 ---
 

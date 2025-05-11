@@ -1,4 +1,4 @@
-﻿using SpacePirates.Console.Game.Engine;
+﻿using SpacePirates.Console.Game;
 using SpacePirates.Console.UI.ConsoleRenderer;
 using SpacePirates.Console.UI.Components;
 using System;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using SpacePirates.API.Models;
 using SpacePirates.API.Models.ShipComponents;
 using SpacePirates.Console.UI.Views;
+using SpacePirates.Console.Game.Engine;
 
 namespace SpacePirates.Console;
 
@@ -33,6 +34,8 @@ public class Program
     {
         string apiBaseUrl = Environment.GetEnvironmentVariable("SPACEPIRATES_API_URL") ?? "http://localhost:5139";
         var api = new ApiClient(apiBaseUrl);
+        AppDomain.CurrentDomain.SetData("ApiClient", api);
+        System.Console.WriteLine("[DEBUG] ApiClient registered in AppDomain");
         var savedGames = await api.ListGamesAsync();
         bool hasSave = savedGames.Count > 0;
 
