@@ -26,14 +26,14 @@ namespace SpacePirates.Console.UI.Views
             var ship = _gameState.PlayerShip;
             string shipName = TruncateWithEllipsis(ship.Name, 10);
             string captainName = TruncateWithEllipsis(ship.CaptainName, 10);
-            buffer.DrawString(textX, y++, $"Ship: {shipName} | Captain: {captainName}", PanelStyles.CommandTextColor);
-
+            buffer.DrawString(textX, y++, $"Ship: {shipName} | Captain: {captainName}", PanelStyles.SubtitleColor);
+            y++;
             int posLabelX = textX + 16;
             buffer.DrawString(textX, y, "NAME:", PanelStyles.SubtitleColor);
             buffer.DrawString(posLabelX, y, "POSITION:", PanelStyles.SubtitleColor);
             y++;
             buffer.DrawString(textX, y, shipName, PanelStyles.CommandTextColor);
-            buffer.DrawString(posLabelX, y, $"({ship.Position.X:F1}, {ship.Position.Y:F1})", PanelStyles.CommandTextColor);
+            buffer.DrawString(posLabelX, y, $"({ship.Position.X:F1}, {StatusView.YCoordToLetter((int)ship.Position.Y)})", PanelStyles.CommandTextColor);
             y++;
 
             buffer.DrawString(textX, y++, new string('─', 24), PanelStyles.FadedColor);
@@ -75,15 +75,15 @@ namespace SpacePirates.Console.UI.Views
 
             buffer.DrawString(textX, y++, new string('─', 24), PanelStyles.FadedColor);
 
-            if (ship.WeaponSystem != null)
-            {
-                buffer.DrawString(textX, y++, "WEAPONS:", PanelStyles.SubtitleColor);
-                double damagePercent = Math.Min(100.0, (ship.WeaponSystem.Damage / 100.0) * 100.0);
-                string damageBar = ShipStatusHelper.RenderBar(damagePercent, 12, '■', ' ');
-                buffer.DrawString(textX, y++, $"Damage: {damageBar}", ConsoleColor.DarkRed);
-                buffer.DrawString(textX, y++, $"Accuracy: ", ConsoleColor.DarkCyan);
-                buffer.DrawString(textX, y++, $"Crit: ", ConsoleColor.Magenta);
-            }
+            // if (ship.WeaponSystem != null)
+            // {
+            //     buffer.DrawString(textX, y++, "WEAPONS:", PanelStyles.SubtitleColor);
+            //     double damagePercent = Math.Min(100.0, (ship.WeaponSystem.Damage / 100.0) * 100.0);
+            //     string damageBar = ShipStatusHelper.RenderBar(damagePercent, 12, '■', ' ');
+            //     buffer.DrawString(textX, y++, $"Damage: {damageBar}", ConsoleColor.DarkRed);
+            //     buffer.DrawString(textX, y++, $"Accuracy: ", ConsoleColor.DarkCyan);
+            //     buffer.DrawString(textX, y++, $"Crit: ", ConsoleColor.Magenta);
+            // }
         }
 
         public override void Update(IGameState gameState)

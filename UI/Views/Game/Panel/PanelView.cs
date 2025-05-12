@@ -10,8 +10,8 @@ namespace SpacePirates.Console.UI.Views
 
         public PanelView(BaseControls controls, BaseStyle styleProvider)
         {
-            Controls = controls;
-            StyleProvider = styleProvider;
+            Controls = controls ?? throw new ArgumentNullException(nameof(controls));
+            StyleProvider = styleProvider ?? throw new ArgumentNullException(nameof(styleProvider));
         }
 
         public override void Render()
@@ -21,7 +21,8 @@ namespace SpacePirates.Console.UI.Views
 
         public override void HandleInput(ConsoleKeyInfo key)
         {
-            Controls.HandleInput(key, this);
+            if (Controls != null)
+                Controls.HandleInput(key, this);
         }
 
         public virtual void Update(IGameState gameState) { }

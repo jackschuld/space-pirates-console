@@ -92,7 +92,7 @@ namespace SpacePirates.Console.UI.Views.Map
             buffer.DrawString(panelX + 2, y++, $"Planets:", ConsoleColor.White);
             foreach (var planet in system.Planets)
             {
-                buffer.DrawString(panelX + 4, y++, $"{planet.Name.ToUpper()} ({planet.PlanetType})", ConsoleColor.Gray);
+                buffer.DrawString(panelX + 4, y++, $"{planet.Name} ({planet.PlanetType})", ConsoleColor.Gray);
                 foreach (var res in planet.Resources)
                 {
                     buffer.DrawString(panelX + 6, y++, $"{res.Resource.Name}: {res.AmountAvailable}", ConsoleColor.DarkYellow);

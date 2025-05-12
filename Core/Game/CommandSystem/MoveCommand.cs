@@ -4,9 +4,9 @@ namespace SpacePirates.Console.Game.CommandSystem
 {
     public class MoveCommand : ICommand
     {
-        public string Name => "move";
-        public string ShortName => "m";
-        public static string Description => "move x y or mxy (x: 1-75, y: a-z)";
+        public string Name => "fly";
+        public string ShortName => "f";
+        public static string Description => "fly x y or fxy (x: 1-75, y: a-z)";
         string ICommand.Description => Description;
 
         public void Execute(CommandContext context, string[] args)
@@ -33,7 +33,7 @@ namespace SpacePirates.Console.Game.CommandSystem
             }
             int y = yStr[0] - 'a' + 1;
 
-            context.Game.MoveShipTo(x, y);
+            context.Game.FlyShipTo(x, y);
             context.Result = $"Moved ship to ({x}, {yStr[0]})";
         }
     }

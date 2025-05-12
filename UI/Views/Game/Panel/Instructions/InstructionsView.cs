@@ -9,38 +9,6 @@ using SpacePirates.Console.UI.Views.Game.Panel.Instructions;
 
 namespace SpacePirates.Console.UI.Views
 {
-    public class InstructionsProvider
-    {
-        public static (string[] Commands, (string Key, string Description)[] QuickKeys) GetInstructions(
-            SpacePirates.Console.Game.Engine.GameEngine.ControlState? controlState)
-        {
-            // Try to get instructions from the current map view if it implements IHasInstructions
-            IHasInstructions? hasInstructions = null;
-            if (SpacePirates.Console.UI.ConsoleRenderer.ConsoleRenderer.CurrentMapView is IHasInstructions mapViewInstructions)
-                hasInstructions = mapViewInstructions;
-
-            switch (controlState)
-            {
-                case SpacePirates.Console.Game.Engine.GameEngine.ControlState.GalaxyMap:
-                case SpacePirates.Console.Game.Engine.GameEngine.ControlState.SolarSystemMap:
-                    if (hasInstructions != null)
-                    {
-                        var commands = hasInstructions.Instructions;
-                        var quickKeys = hasInstructions.QuickKeys.Concat(InstructionsHelper.GetDefaultQuickKeys()).ToArray();
-                        return (commands, quickKeys);
-                    }
-                    else
-                    {
-                        return (InstructionsData.Commands, InstructionsData.QuickKeys);
-                    }
-                case SpacePirates.Console.Game.Engine.GameEngine.ControlState.StartMenu:
-                    return (new string[] { }, new[] { ("h/j/k/l", "Move selection") });
-                default:
-                    return (InstructionsData.Commands, InstructionsData.QuickKeys);
-            }
-        }
-    }
-
     public class InstructionsView : PanelView
     {
         private readonly (int X, int Y, int Width, int Height) _bounds;
@@ -63,7 +31,8 @@ namespace SpacePirates.Console.UI.Views
             int y = _bounds.Y + 3;
             int textX = _bounds.X + 2;
 
-            var (commands, quickKeys) = InstructionsProvider.GetInstructions(_controlState);
+            // Use explicit types for deconstruction
+            (string[] commands, (string Key, string Description)[] quickKeys) = InstructionsProvider.GetInstructions(_controlState);
 
             // Commands section
             buffer.DrawString(textX, y++, "COMMANDS:", PanelStyles.SubtitleColor);
@@ -76,7 +45,8 @@ namespace SpacePirates.Console.UI.Views
             buffer.DrawString(textX, y++, new string('─', _bounds.Width - 4), PanelStyles.FadedColor);
             // Quick keys section
             buffer.DrawString(textX, y++, "QUICK KEYS:", PanelStyles.SubtitleColor);
-            foreach (var (key, desc) in quickKeys)
+            // Use explicit types for deconstruction in foreach
+            foreach ((string key, string desc) in quickKeys)
             {
                 y = DrawStyled(buffer, textX, y, key, desc, _bounds.Width - 4, PanelStyles.QuickKeyColor, PanelStyles.CommandTextColor, false, true);
             }

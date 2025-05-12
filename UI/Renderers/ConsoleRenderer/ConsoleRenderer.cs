@@ -133,7 +133,10 @@ namespace SpacePirates.Console.UI.ConsoleRenderer
                         _leftPanelComponent.BorderStyle = BoxStyle.Double;
                         break;
                     case SpacePirates.API.Models.Planet planet:
-                        _leftPanelComponent = new PlanetStatusView(_controls, _statusStyle, bounds, planet);
+                        if (CurrentMapView is SpacePirates.Console.UI.Views.SolarSystemMapView solarSystemMap)
+                            _leftPanelComponent = new PlanetStatusView(_controls, _statusStyle, bounds, planet, solarSystemMap.System);
+                        else
+                            _leftPanelComponent = new PlanetStatusView(_controls, _statusStyle, bounds, planet, null);
                         _leftPanelComponent.BorderStyle = BoxStyle.Double;
                         break;
                     // Add more cases as needed for other selectable types

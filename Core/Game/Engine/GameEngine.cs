@@ -47,7 +47,7 @@ namespace SpacePirates.Console.Game.Engine
         private DateTime _lastShieldChargeUpdate = DateTime.UtcNow;
         private double _shieldChargeProgress = 0;
         private CommandManager? _commandManager;
-        private ShieldController _shieldController;
+        private ShieldController? _shieldController;
         public bool ShowInstructionsPanel => _showInstructionsPanel;
         private ControlState _currentState = ControlState.GalaxyMap;
 
@@ -232,7 +232,7 @@ namespace SpacePirates.Console.Game.Engine
                         if (int.TryParse(xPart, out int x) && yPart.Length == 1 && char.IsLetter(yPart[0]))
                         {
                             int y = char.ToUpper(yPart[0]) - 'A' + 1;
-                            MoveShipTo(x, y);
+                            FlyShipTo(x, y);
                         }
                         else
                         {
@@ -326,12 +326,12 @@ namespace SpacePirates.Console.Game.Engine
             _isRunning = false;
         }
 
-        public void MoveShipTo(int targetX, int targetY)
+        public void FlyShipTo(int targetX, int targetY)
         {
             if (_gameState?.PlayerShip == null)
                 return;
             var movementSystem = new MovementSystem();
-            movementSystem.MoveShipTo(
+            movementSystem.FlyShipTo(
                 _gameState.PlayerShip,
                 targetX,
                 targetY,

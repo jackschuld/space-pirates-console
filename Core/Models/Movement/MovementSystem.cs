@@ -66,7 +66,7 @@ namespace SpacePirates.Console.Core.Models.Movement
             }
         }
 
-        public void MoveShipTo(Ship ship, int targetX, int targetY, Action onStep, Action<string> onMessage, ShipTrail? trail = null)
+        public void FlyShipTo(Ship ship, int targetX, int targetY, Action onStep, Action<string> onMessage, ShipTrail? trail = null)
         {
             if (ship == null)
                 return;

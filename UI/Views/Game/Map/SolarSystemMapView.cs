@@ -1,9 +1,11 @@
+using System;
 using SpacePirates.API.Models;
 using SpacePirates.Console.Core.Interfaces;
 using SpacePirates.Console.Core.Models.Movement;
 using SpacePirates.Console.UI.Views.Map;
-using System;
+using SpacePirates.Console.UI.Helpers;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SpacePirates.Console.UI.Views
 {
@@ -27,19 +29,41 @@ namespace SpacePirates.Console.UI.Views
 
         protected override void RenderMapObjects(IBufferWriter buffer)
         {
-            // Center of the map area
-            int centerX = _bounds.X + _bounds.Width / 2;
-            int centerY = _bounds.Y + _bounds.Height / 2;
-            int radius = Math.Min(_bounds.Width, _bounds.Height) / 3;
-            var planetPositions = new Dictionary<(int X, int Y), Planet>();
+            int radius = Math.Min(_bounds.Width, _bounds.Height) / 2 - 2;
+
+            // Use the star's coordinates as the center
+            double starX = _system.Star?.X ?? _system.X;
+            double starY = _system.Star?.Y ?? _system.Y;
+
+            // Place planets in a circle within the visible map grid (1-75, 1-30)
             int planetCount = _system.Planets.Count;
+            int minX = _bounds.X + 1;
+            int maxX = _bounds.X + _bounds.Width - 2;
+            int minY = _bounds.Y + 1;
+            int maxY = _bounds.Y + _bounds.Height - 2;
+            double planetRadiusX = (maxX - minX) / 2.2;
+            double planetRadiusY = (maxY - minY) / 2.2;
+            int mapCenterX = minX + (maxX - minX) / 2;
+            int mapCenterY = minY + (maxY - minY) / 2;
+            var planetPositions = new Dictionary<(int X, int Y), Planet>();
+            // Use a deterministic seed based on the solar system's ID to keep planet positions fixed
+            int systemSeed = _system.Id;
+            var rand = new Random(systemSeed);
             for (int i = 0; i < planetCount; i++)
             {
-                // Spread planets in a circle
-                double angle = 2 * Math.PI * i / planetCount;
-                int x = centerX + (int)(radius * Math.Cos(angle));
-                int y = centerY + (int)(radius * Math.Sin(angle));
+                // Add random offset to angle and radius for more natural, staggered orbits
+                double baseAngle = 2 * Math.PI * i / planetCount;
+                double angleOffset = (rand.NextDouble() - 0.5) * (Math.PI / planetCount); // up to ±half the segment
+                double angle = baseAngle + angleOffset;
+                double radiusOffsetX = planetRadiusX * (0.9 + 0.2 * rand.NextDouble()); // 90% to 110% of base radius
+                double radiusOffsetY = planetRadiusY * (0.9 + 0.2 * rand.NextDouble());
+                int x = mapCenterX + (int)(radiusOffsetX * Math.Cos(angle));
+                int y = mapCenterY + (int)(radiusOffsetY * Math.Sin(angle));
+                x = Math.Max(minX, Math.Min(maxX, x));
+                y = Math.Max(minY, Math.Min(maxY, y));
                 planetPositions[(x, y)] = _system.Planets[i];
+                _system.Planets[i].X = x;
+                _system.Planets[i].Y = y;
             }
 
             // Draw ship trail if available
@@ -71,13 +95,17 @@ namespace SpacePirates.Console.UI.Views
                     bool isCursor = (x == _cursorX && y == _cursorY);
                     if (planetPositions.TryGetValue((x, y), out var planet))
                     {
+                        var planetColor = PlanetColors.GetPlanetColor(planet);
+                        char planetIcon = MapRenderer.GetPlanetIcon(planet);
                         if (isCursor)
                         {
-                            buffer.DrawChar(x, y, '●', ConsoleColor.Black, ConsoleColor.Yellow);
+                            buffer.DrawChar(x, y, planetIcon, ConsoleColor.Black, planetColor);
                             _planetUnderCursor = planet;
                         }
                         else
-                            buffer.DrawChar(x, y, '●', ConsoleColor.Yellow, ConsoleColor.Black);
+                        {
+                            buffer.DrawChar(x, y, planetIcon, planetColor, ConsoleColor.Black);
+                        }
                     }
                     else if (isCursor)
                     {
@@ -125,6 +153,13 @@ namespace SpacePirates.Console.UI.Views
                 ConsoleColor shipColor = ship.Shield?.IsActive == true ? ConsoleColor.Cyan : ConsoleColor.White;
                 buffer.DrawChar(shipX, shipY, shipChar, shipColor);
             }
+
+            // Draw the star at the center with a symbol and color based on its type
+            if (_system.Star != null)
+            {
+                var (starChar, starColor) = MapRenderer.GetStarSymbolAndColor(_system.Star.Type);
+                buffer.DrawChar(mapCenterX, mapCenterY, starChar, starColor);
+            }
         }
 
         protected override void RenderDetailsPanel(IBufferWriter buffer)
@@ -160,15 +195,34 @@ namespace SpacePirates.Console.UI.Views
         public override void Update(SpacePirates.Console.Core.Interfaces.IGameState gameState)
         {
             _gameState = gameState;
+            // Check if ship is near a planet and update command line help text
+            if (ParentGameView != null && ParentGameView.CommandLine is CommandLineView clv)
+            {
+                var nearbyPlanet = GetNearbyPlanet();
+                if (nearbyPlanet != null && nearbyPlanet.IsDiscovered)
+                {
+                    clv.SetHelpText($"Press 'd' to drill planet {nearbyPlanet.Name}");
+                }
+                else
+                {
+                    clv.SetHelpText("Tab to toggle instructions | ESC to exit");
+                }
+            }
+        }
+
+        private Planet? GetNearbyPlanet()
+        {
+            if (_gameState?.PlayerShip == null) return null;
+            int shipX = _bounds.X + (int)_gameState.PlayerShip.Position.X;
+            int shipY = _bounds.Y + (int)_gameState.PlayerShip.Position.Y;
+            const int DRILL_RADIUS = 5;
+            return _system.Planets
+                .FirstOrDefault(p => Math.Sqrt(Math.Pow((int)Math.Round(p.X) - shipX, 2) + Math.Pow((int)Math.Round(p.Y) - shipY, 2)) <= DRILL_RADIUS);
         }
 
         public override void HandleInput(ConsoleKeyInfo keyInfo)
         {
             base.HandleInput(keyInfo);
-            if (char.ToLower(keyInfo.KeyChar) == 'd')
-            {
-                _showDetails = !_showDetails;
-            }
         }
 
         public override void Render()
@@ -177,14 +231,97 @@ namespace SpacePirates.Console.UI.Views
             // You may want to throw NotImplementedException or leave empty if not used directly
         }
 
-        public override string[] Instructions => new[] { "Move: mxy (ie. m1a)" };
+        public override string[] Instructions => new[] { 
+            "Fly: fxy (ie. f1a)",
+            "Examine: exx00 (ie. ex4d2)"
+             };
         public override (string Key, string Description)[] QuickKeys => new[] {
             ("h/j/k/l", "Move cursor"),
-            ("g", "Go back to galaxy map"),
-            ("m", "Start a Move command"),
-            ("s", "Toggle shield")
+            ("e", "Examine planet (reveal details)"),
+            ("f", "Start a Fly command"),
+            ("d", "Drill planet (mine resources)"),
+            ("s", "Toggle shield"),
+            ("r", "Go back to galaxy map")
         };
 
         public object? SelectedObject => _planetUnderCursor;
+
+        public Planet? GetPlanetUnderCursor()
+        {
+            int mapCenterX = _bounds.X + _bounds.Width / 2;
+            int mapCenterY = _bounds.Y + _bounds.Height / 2;
+            int radius = Math.Min(_bounds.Width, _bounds.Height) / 3;
+            var planetPositions = new Dictionary<(int X, int Y), Planet>();
+            int planetCount = _system.Planets.Count;
+            for (int i = 0; i < planetCount; i++)
+            {
+                double angle = 2 * Math.PI * i / planetCount;
+                int x = mapCenterX + (int)(radius * Math.Cos(angle));
+                int y = mapCenterY + (int)(radius * Math.Sin(angle));
+                planetPositions[(x, y)] = _system.Planets[i];
+            }
+            planetPositions.TryGetValue((_cursorX, _cursorY), out var planet);
+            return planet;
+        }
+
+        public SolarSystem System => _system;
+
+        public static (int x, int y) GetPlanetMapCoordinates(int planetIndex, int planetCount, (int X, int Y, int Width, int Height) bounds)
+        {
+            int minX = bounds.X + 1;
+            int maxX = bounds.X + bounds.Width - 2;
+            int minY = bounds.Y + 1;
+            int maxY = bounds.Y + bounds.Height - 2;
+            double planetRadiusX = (maxX - minX) / 2.2;
+            double planetRadiusY = (maxY - minY) / 2.2;
+            int mapCenterX = minX + (maxX - minX) / 2;
+            int mapCenterY = minY + (maxY - minY) / 2;
+            // Use deterministic random for this planet
+            int systemSeed = bounds.GetHashCode() ^ planetCount; // fallback if no system ID
+            var rand = new Random(systemSeed);
+            for (int i = 0; i < planetIndex; i++) // advance RNG to correct state
+            {
+                rand.NextDouble(); rand.NextDouble(); rand.NextDouble(); rand.NextDouble();
+            }
+            double baseAngle = 2 * Math.PI * planetIndex / planetCount;
+            double angleOffset = (rand.NextDouble() - 0.5) * (Math.PI / planetCount);
+            double angle = baseAngle + angleOffset;
+            double radiusOffsetX = planetRadiusX * (0.9 + 0.2 * rand.NextDouble());
+            double radiusOffsetY = planetRadiusY * (0.9 + 0.2 * rand.NextDouble());
+            int x = mapCenterX + (int)(radiusOffsetX * Math.Cos(angle));
+            int y = mapCenterY + (int)(radiusOffsetY * Math.Sin(angle));
+            x = Math.Max(minX, Math.Min(maxX, x));
+            y = Math.Max(minY, Math.Min(maxY, y));
+            return (x, y);
+        }
+
+        public GameView? ParentGameView { get; set; }
+    }
+
+    public static class SolarSystemExtensions
+    {
+        public static void UpdateFrom(this SolarSystem target, SolarSystem source)
+        {
+            target.Name = source.Name;
+            target.X = source.X;
+            target.Y = source.Y;
+            target.SunType = source.SunType;
+            // Update star
+            if (target.Star != null && source.Star != null)
+            {
+                target.Star.Name = source.Star.Name;
+                target.Star.X = source.Star.X;
+                target.Star.Y = source.Star.Y;
+                target.Star.Type = source.Star.Type;
+                if (target.Star.GetType().GetProperty("IsDiscovered") != null && source.Star.GetType().GetProperty("IsDiscovered") != null)
+                    target.Star.GetType().GetProperty("IsDiscovered")?.SetValue(target.Star, source.Star.GetType().GetProperty("IsDiscovered")?.GetValue(source.Star));
+            }
+            // Update planets
+            target.Planets.Clear();
+            foreach (var planet in source.Planets)
+            {
+                target.Planets.Add(planet);
+            }
+        }
     }
 } 

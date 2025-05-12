@@ -15,7 +15,7 @@ namespace SpacePirates.Console.Core.Models.State
         
         // Calculated values
         public static int StatusAreaWidth => DEFAULT_CONSOLE_WIDTH - GAME_AREA_WIDTH - 2;
-        public static int MainAreaHeight => DEFAULT_CONSOLE_HEIGHT - HELP_AREA_HEIGHT - AXIS_LABEL_HEIGHT;
+        public static int MainAreaHeight => DEFAULT_CONSOLE_HEIGHT - HELP_AREA_HEIGHT - AXIS_LABEL_HEIGHT + 1;
         
         // Usable game area (accounting for borders)
         public static int UsableGameWidth => GAME_AREA_WIDTH - 2;  // -2 for left and right borders (1-75)

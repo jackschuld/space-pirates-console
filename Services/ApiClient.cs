@@ -17,7 +17,6 @@ namespace SpacePirates.Console.UI.Components
         {
             _baseUrl = baseUrl.TrimEnd('/');
             _http = new HttpClient();
-            System.Console.WriteLine($"[DEBUG] ApiClient baseUrl: {_baseUrl}");
         }
 
         public async Task<List<GameSummary>> ListGamesAsync()
@@ -38,7 +37,6 @@ namespace SpacePirates.Console.UI.Components
                 return null;
             }
             var json = await resp.Content.ReadAsStringAsync();
-            System.Console.WriteLine($"[DEBUG] Raw StartNewGame JSON: {json}");
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             try
             {
@@ -70,15 +68,43 @@ namespace SpacePirates.Console.UI.Components
         {
             try
             {
-                System.Console.WriteLine($"[DEBUG] Sending POST to {_baseUrl}/api/game/discover-star/{starId}");
                 var resp = await _http.PostAsync($"{_baseUrl}/api/game/discover-star/{starId}", null);
-                System.Console.WriteLine($"[DEBUG] DiscoverStarAsync status: {resp.StatusCode}");
                 return resp.IsSuccessStatusCode;
             }
             catch (Exception ex)
             {
                 System.Console.WriteLine($"[ERROR] DiscoverStarAsync exception: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<bool> InspectPlanetAsync(int planetId)
+        {
+            try
+            {
+                var resp = await _http.PostAsync($"{_baseUrl}/api/game/inspect-planet/{planetId}", null);
+                return resp.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public async Task<SolarSystem?> GetSolarSystemAsync(int systemId)
+        {
+            try
+            {
+                var resp = await _http.GetAsync($"{_baseUrl}/api/game/solar-system/{systemId}");
+                if (!resp.IsSuccessStatusCode) return null;
+                var json = await resp.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<SolarSystem>(json, options);
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[ERROR] GetSolarSystemAsync exception: {ex.Message}");
+                return null;
             }
         }
     }

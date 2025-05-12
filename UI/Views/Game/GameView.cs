@@ -65,6 +65,7 @@ namespace SpacePirates.Console.UI.Views
             int gameViewX = SpacePirates.Console.Core.Models.State.ConsoleConfig.StatusAreaWidth;
             var bounds = (gameViewX, 0, SpacePirates.Console.Core.Models.State.ConsoleConfig.GAME_AREA_WIDTH, SpacePirates.Console.Core.Models.State.ConsoleConfig.MainAreaHeight);
             var ssmv = new SpacePirates.Console.UI.Views.SolarSystemMapView(system, bounds);
+            ssmv.ParentGameView = this;
             SetMapView(ssmv);
             Controls = new SpacePirates.Console.UI.Controls.SolarSystemControls();
             if (trail != null) ssmv.SetShipTrail(trail);

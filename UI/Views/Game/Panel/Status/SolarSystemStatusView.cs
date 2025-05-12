@@ -4,6 +4,7 @@ using SpacePirates.Console.Core.Interfaces;
 using SpacePirates.API.Models;
 using System.Linq;
 using SpacePirates.Console.UI.Components;
+using SpacePirates.Console.UI.Helpers;
 
 namespace SpacePirates.Console.UI.Views
 {
@@ -29,20 +30,23 @@ namespace SpacePirates.Console.UI.Views
             if (_system.Star == null || !_system.Star.IsDiscovered)
             {
                 buffer.DrawBox(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height, BorderStyle);
-                buffer.DrawString(textX, y + 2, "DATA UNKNOWN", DiscoveryPanelStyle.HiddenTextColor);
-                buffer.DrawString(textX, y + 4, "Explore this star to reveal", DiscoveryPanelStyle.HiddenTextColor);
-                buffer.DrawString(textX, y + 5, "system details.", DiscoveryPanelStyle.HiddenTextColor);
+                buffer.DrawString(textX, y++, $"Name: ???", ConsoleColor.DarkGray);
+                buffer.DrawString(textX, y++, $"Sun: ???", ConsoleColor.DarkGray);
+                buffer.DrawString(textX, y++, $"Planets: ???", ConsoleColor.DarkGray);
+                buffer.DrawString(textX, y + 4, "Warp using 'w' to reveal star details.", ConsoleColor.DarkGray);
+                buffer.DrawString(textX, y + 5, "system details.", ConsoleColor.DarkGray);
                 return;
             }
             buffer.DrawString(textX, y++, $"Name: {_system.Name}", ConsoleColor.Cyan);
-            buffer.DrawString(textX, y++, $"Sun: {_system.SunType}", ConsoleColor.Yellow);
+            var starDescriptor = MapRenderer.GetStarDescriptor(_system.Star.Type);
+            buffer.DrawString(textX, y++, $"Sun: {starDescriptor}", ConsoleColor.Yellow);
             buffer.DrawString(textX, y++, $"Planets: {_system.Planets.Count}", PanelStyles.CommandTextColor);
             foreach (var planet in _system.Planets)
             {
                 if (!planet.IsDiscovered)
                 {
-                    buffer.DrawString(textX + 1, y++, "???", DiscoveryPanelStyle.HiddenTextColor);
-                    buffer.DrawString(textX + 4, y++, "(Unknown)", DiscoveryPanelStyle.HiddenTextColor);
+                    buffer.DrawString(textX + 1, y++, "???", ConsoleColor.DarkGray);
+                    buffer.DrawString(textX + 4, y++, "(Unknown)", ConsoleColor.DarkGray);
                     y++; // Space for resources
                 }
                 else
@@ -52,11 +56,28 @@ namespace SpacePirates.Console.UI.Views
                     buffer.DrawString(textX + 4, y++, $"({planet.PlanetType})", ConsoleColor.Gray);
                     foreach (var res in planet.Resources)
                     {
-                        var color = StatusPanelStyle.GetResourceColor(res.Resource.Name);
-                        var sciName = StatusPanelStyle.GetScientificResourceName(res.Resource.Name);
+                        var color = ResourceHelper.GetResourceColor(res.Resource.Name);
+                        var sciName = ResourceHelper.GetResourceName(res.Resource.Name);
                         buffer.DrawString(textX + 6, y++, $"{sciName}: {res.AmountAvailable}", color);
                     }
                 }
+            }
+        }
+
+        public void SetSystem(SolarSystem? system)
+        {
+            _system = system;
+        }
+
+        public override void Update(IGameState gameState)
+        {
+            if (_system == null) return;
+            // Cast to concrete GameState to access Galaxy
+            if (gameState is SpacePirates.Console.Core.Models.State.GameState concreteState && concreteState.Galaxy != null)
+            {
+                var updatedSystem = concreteState.Galaxy.SolarSystems.FirstOrDefault(s => s.Id == _system.Id);
+                if (updatedSystem != null)
+                    _system = updatedSystem;
             }
         }
     }

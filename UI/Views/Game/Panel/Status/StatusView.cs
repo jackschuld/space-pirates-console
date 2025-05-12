@@ -38,5 +38,14 @@ namespace SpacePirates.Console.UI.Views
 
         public override void Update(IGameState gameState) { }
         public virtual void UpdateStatus(IGameState gameState) { }
+
+        protected static string YCoordToLetter(int y)
+        {
+            // Convert 1-26 to A-Z
+            int zeroBased = y - 1;
+            if (zeroBased >= 0 && zeroBased < 26)
+                return ((char)('A' + zeroBased)).ToString();
+            return y.ToString();
+        }
     }
 } 

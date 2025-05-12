@@ -35,7 +35,6 @@ public class Program
         string apiBaseUrl = Environment.GetEnvironmentVariable("SPACEPIRATES_API_URL") ?? "http://localhost:5139";
         var api = new ApiClient(apiBaseUrl);
         AppDomain.CurrentDomain.SetData("ApiClient", api);
-        System.Console.WriteLine("[DEBUG] ApiClient registered in AppDomain");
         var savedGames = await api.ListGamesAsync();
         bool hasSave = savedGames.Count > 0;
 
