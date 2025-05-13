@@ -29,44 +29,7 @@ namespace SpacePirates.Console.UI.Views
 
         protected override void RenderMapObjects(IBufferWriter buffer)
         {
-            int radius = Math.Min(_bounds.Width, _bounds.Height) / 2 - 2;
-
-            // Use the star's coordinates as the center
-            double starX = _system.Star?.X ?? _system.X;
-            double starY = _system.Star?.Y ?? _system.Y;
-
-            // Place planets in a circle within the visible map grid (1-75, 1-30)
-            int planetCount = _system.Planets.Count;
-            int minX = _bounds.X + 1;
-            int maxX = _bounds.X + _bounds.Width - 2;
-            int minY = _bounds.Y + 1;
-            int maxY = _bounds.Y + _bounds.Height - 2;
-            double planetRadiusX = (maxX - minX) / 2.2;
-            double planetRadiusY = (maxY - minY) / 2.2;
-            int mapCenterX = minX + (maxX - minX) / 2;
-            int mapCenterY = minY + (maxY - minY) / 2;
-            var planetPositions = new Dictionary<(int X, int Y), Planet>();
-            // Use a deterministic seed based on the solar system's ID to keep planet positions fixed
-            int systemSeed = _system.Id;
-            var rand = new Random(systemSeed);
-            for (int i = 0; i < planetCount; i++)
-            {
-                // Add random offset to angle and radius for more natural, staggered orbits
-                double baseAngle = 2 * Math.PI * i / planetCount;
-                double angleOffset = (rand.NextDouble() - 0.5) * (Math.PI / planetCount); // up to ±half the segment
-                double angle = baseAngle + angleOffset;
-                double radiusOffsetX = planetRadiusX * (0.9 + 0.2 * rand.NextDouble()); // 90% to 110% of base radius
-                double radiusOffsetY = planetRadiusY * (0.9 + 0.2 * rand.NextDouble());
-                int x = mapCenterX + (int)(radiusOffsetX * Math.Cos(angle));
-                int y = mapCenterY + (int)(radiusOffsetY * Math.Sin(angle));
-                x = Math.Max(minX, Math.Min(maxX, x));
-                y = Math.Max(minY, Math.Min(maxY, y));
-                planetPositions[(x, y)] = _system.Planets[i];
-                _system.Planets[i].X = x;
-                _system.Planets[i].Y = y;
-            }
-
-            // Draw ship trail if available
+            // Draw ship trail if available (keep this logic here for now)
             if (_gameState?.PlayerShip != null && _shipTrail != null)
             {
                 var trail = _shipTrail.GetTrail();
@@ -86,39 +49,16 @@ namespace SpacePirates.Console.UI.Views
                 }
             }
 
-            // Draw planets and cursor
-            _planetUnderCursor = null;
-            for (int y = _bounds.Y + 1; y < _bounds.Y + _bounds.Height - 1; y++)
-            {
-                for (int x = _bounds.X + 1; x < _bounds.X + _bounds.Width - 1; x++)
-                {
-                    bool isCursor = (x == _cursorX && y == _cursorY);
-                    if (planetPositions.TryGetValue((x, y), out var planet))
-                    {
-                        var planetColor = PlanetColors.GetPlanetColor(planet);
-                        char planetIcon = MapRenderer.GetPlanetIcon(planet);
-                        if (isCursor)
-                        {
-                            buffer.DrawChar(x, y, planetIcon, ConsoleColor.Black, planetColor);
-                            _planetUnderCursor = planet;
-                        }
-                        else
-                        {
-                            buffer.DrawChar(x, y, planetIcon, planetColor, ConsoleColor.Black);
-                        }
-                    }
-                    else if (isCursor)
-                    {
-                        buffer.DrawChar(x, y, ' ', null, ConsoleColor.Yellow);
-                    }
-                    else
-                    {
-                        buffer.DrawChar(x, y, ' ', null, ConsoleColor.Black);
-                    }
-                }
-            }
+            // Use MapRenderer to render planets and set _planetUnderCursor
+            SpacePirates.Console.UI.Helpers.MapRenderer.RenderPlanets(
+                buffer,
+                _system,
+                _bounds,
+                CursorPosition,
+                out _planetUnderCursor
+            );
 
-            // Draw ship if available
+            // Draw ship if available (keep this logic here for now)
             if (_gameState?.PlayerShip != null)
             {
                 var ship = _gameState.PlayerShip;
@@ -154,10 +94,16 @@ namespace SpacePirates.Console.UI.Views
                 buffer.DrawChar(shipX, shipY, shipChar, shipColor);
             }
 
-            // Draw the star at the center with a symbol and color based on its type
+            // Draw the star at the center with a symbol and color based on its type (keep this logic here for now)
             if (_system.Star != null)
             {
-                var (starChar, starColor) = MapRenderer.GetStarSymbolAndColor(_system.Star.Type);
+                var (starChar, starColor) = SpacePirates.Console.UI.Helpers.MapRenderer.GetStarSymbolAndColor(_system.Star.Type);
+                int minX = _bounds.X + 1;
+                int maxX = _bounds.X + _bounds.Width - 2;
+                int minY = _bounds.Y + 1;
+                int maxY = _bounds.Y + _bounds.Height - 2;
+                int mapCenterX = minX + (maxX - minX) / 2;
+                int mapCenterY = minY + (maxY - minY) / 2;
                 buffer.DrawChar(mapCenterX, mapCenterY, starChar, starColor);
             }
         }

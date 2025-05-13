@@ -48,6 +48,7 @@ namespace SpacePirates.Console.Game.Engine
         private double _shieldChargeProgress = 0;
         private CommandManager? _commandManager;
         private ShieldController? _shieldController;
+        private readonly MovementSystem _movementSystem = new MovementSystem();
         public bool ShowInstructionsPanel => _showInstructionsPanel;
         private ControlState _currentState = ControlState.GalaxyMap;
 
@@ -112,145 +113,9 @@ namespace SpacePirates.Console.Game.Engine
         {
             if (!System.Console.KeyAvailable) return;
             var key = System.Console.ReadKey(true);
-            if (_showQuitConfirm)
-            {
-                HandleQuitConfirmation(key);
-                return;
-            }
-            switch (_currentState)
-            {
-                case ControlState.StartMenu:
-                    HandleStartMenuInput(key);
-                    break;
-                case ControlState.GalaxyMap:
-                    HandleGalaxyMapInput(key);
-                    break;
-                case ControlState.SolarSystemMap:
-                    HandleSolarSystemInput(key);
-                    break;
-                case ControlState.NameEntry:
-                    HandleNameEntryInput(key);
-                    break;
-                case ControlState.CommandLine:
-                    HandleCommandLineInput(key);
-                    break;
-            }
-        }
-
-        private void HandleQuitConfirmation(ConsoleKeyInfo key)
-        {
-            if (key.Key == ConsoleKey.Y)
-            {
-                _isRunning = false;
-            }
-            else if (key.Key == ConsoleKey.N)
-            {
-                _showQuitConfirm = false;
-                if (_wasShowingInstructions)
-                {
-                    _renderer.ShowMessage(_instructionsText);
-                }
-                else
-                {
-                    _renderer.ShowMessage(_defaultHelpText);
-                }
-                if (_renderer is ConsoleRenderer cr1)
-                    cr1.ShowInstructionsPanel = _showInstructionsPanel;
-                _renderer.EndFrame();
-            }
-        }
-
-        private void HandleStartMenuInput(ConsoleKeyInfo key)
-        {
-            if (key.Key == ConsoleKey.Enter)
-            {
-                // TODO: Implement menu selection logic
-            }
-            else if ("hjklHJLK".Contains(key.KeyChar))
-            {
-                // TODO: Implement menu movement logic
-            }
-        }
-
-        private void HandleNameEntryInput(ConsoleKeyInfo key)
-        {
-            // TODO: Implement name entry logic
-        }
-
-        private void HandleCommandLineInput(ConsoleKeyInfo key)
-        {
-            // TODO: Implement command line logic
-        }
-
-        private void HandleGalaxyMapInput(ConsoleKeyInfo key)
-        {
             if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv && gpv != null)
             {
                 gpv.HandleInput(key);
-            }
-        }
-
-        private void HandleSolarSystemInput(ConsoleKeyInfo key)
-        {
-            if (_renderer is ConsoleRenderer cr && cr._gameComponent is GameView gpv && gpv.Map is SolarSystemMapView ssc)
-            {
-                gpv.HandleInput(key);
-            }
-            else
-            {
-                HandleSolarSystemPanelInput(key);
-            }
-        }
-
-        private void HandleSolarSystemPanelInput(ConsoleKeyInfo key)
-        {
-            switch (char.ToLower(key.KeyChar))
-            {
-                case 'm':
-                    var moveInput = CommandInputLoop("Move: ");
-                    if (!string.IsNullOrWhiteSpace(moveInput))
-                    {
-                        moveInput = moveInput.Replace(",", " ").Replace("-", " ").Trim();
-                        string xPart = string.Empty, yPart = string.Empty;
-                        var parts = moveInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length == 2)
-                        {
-                            xPart = parts[0];
-                            yPart = parts[1];
-                        }
-                        else if (parts.Length == 1)
-                        {
-                            var s = parts[0];
-                            int i = 0;
-                            while (i < s.Length && char.IsDigit(s[i])) i++;
-                            if (i > 0 && i < s.Length)
-                            {
-                                xPart = s.Substring(0, i);
-                                yPart = s.Substring(i);
-                            }
-                        }
-                        if (int.TryParse(xPart, out int x) && yPart.Length == 1 && char.IsLetter(yPart[0]))
-                        {
-                            int y = char.ToUpper(yPart[0]) - 'A' + 1;
-                            FlyShipTo(x, y);
-                        }
-                        else
-                        {
-                            _renderer.ShowMessage("Invalid coordinates. Use: x y (e.g. 12 A or 12A)", true);
-                            _renderer.EndFrame();
-                            Thread.Sleep(1200);
-                            _renderer.ShowMessage(_defaultHelpText);
-                        }
-                    }
-                    else
-                    {
-                        _renderer.ShowMessage(_defaultHelpText);
-                        _renderer.EndFrame();
-                    }
-                    break;
-                case 's':
-                    _shieldController?.HandleShieldKey();
-                    break;
             }
         }
 
@@ -321,17 +186,11 @@ namespace SpacePirates.Console.Game.Engine
             _renderer.EndFrame();
         }
 
-        public void Stop()
-        {
-            _isRunning = false;
-        }
-
         public void FlyShipTo(int targetX, int targetY)
         {
             if (_gameState?.PlayerShip == null)
                 return;
-            var movementSystem = new MovementSystem();
-            movementSystem.FlyShipTo(
+            _movementSystem.FlyShipTo(
                 _gameState.PlayerShip,
                 targetX,
                 targetY,
@@ -346,20 +205,17 @@ namespace SpacePirates.Console.Game.Engine
                 },
                 _shipTrail
             );
-        }
-
-        public SolarSystem? FindSolarSystem(string input)
-        {
-            if (_gameState?.Galaxy == null) return null;
-            if (int.TryParse(input, out int id))
-                return _gameState.Galaxy.SolarSystems.Find(s => s.Id == id);
-            var exact = _gameState.Galaxy.SolarSystems.Find(s => s.Name.Equals(input, StringComparison.OrdinalIgnoreCase));
-            if (exact != null) return exact;
-            var endsWith = _gameState.Galaxy.SolarSystems.Find(s =>
-                s.Name.Contains("-") &&
-                s.Name.Substring(s.Name.LastIndexOf('-') + 1).Equals(input, StringComparison.OrdinalIgnoreCase));
-            if (endsWith != null) return endsWith;
-            return _gameState.Galaxy.SolarSystems.Find(s => s.Name.IndexOf(input, StringComparison.OrdinalIgnoreCase) >= 0);
+            // After movement, persist position and fuel
+            var api = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
+            var ship = _gameState.PlayerShip;
+            if (api != null && ship != null)
+            {
+                var dto = new {
+                    Position = new { X = ship.Position.X, Y = ship.Position.Y },
+                    FuelSystem = new { CurrentLevel = ship.FuelSystem.CurrentLevel, CurrentFuel = ship.FuelSystem.CurrentFuel }
+                };
+                _ = api.UpdateShipStateAsync(ship.Id, dto);
+            }
         }
 
         public Galaxy? CurrentGalaxy => _gameState?.Galaxy;

@@ -107,6 +107,62 @@ namespace SpacePirates.Console.UI.Components
                 return null;
             }
         }
+
+        public async Task PostAsync(string url, object data)
+        {
+            using var client = new HttpClient();
+            var json = System.Text.Json.JsonSerializer.Serialize(data);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<bool> UpdateShipFuelAsync(int shipId, double percentFuel)
+        {
+            try
+            {
+                var resp = await _http.PostAsJsonAsync($"{_baseUrl}/api/game/update-ship-fuel/{shipId}", percentFuel);
+                return resp.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[ERROR] UpdateShipFuelAsync exception: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateShipStateAsync(int shipId, object shipUpdateDto)
+        {
+            try
+            {
+                var resp = await _http.PostAsJsonAsync($"{_baseUrl}/api/game/update-ship-state/{shipId}", shipUpdateDto);
+                return resp.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[ERROR] UpdateShipStateAsync exception: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<dynamic?> MinePlanetResourceAsync(int planetId, int resourceId, int amount, int shipId)
+        {
+            var req = new {
+                PlanetId = planetId,
+                ResourceId = resourceId,
+                Amount = amount,
+                ShipId = shipId
+            };
+            var resp = await _http.PostAsJsonAsync($"{_baseUrl}/api/game/mine-planet-resource", req);
+            if (!resp.IsSuccessStatusCode)
+            {
+                System.Console.WriteLine($"API returned error: {resp.StatusCode}");
+                return null;
+            }
+            var json = await resp.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<dynamic>(json, options);
+        }
     }
 
     public class GameSummary

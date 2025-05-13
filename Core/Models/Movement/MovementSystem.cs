@@ -80,7 +80,7 @@ namespace SpacePirates.Console.Core.Models.Movement
             int startX = (int)ship.Position.X;
             int startY = (int)ship.Position.Y;
 
-            double baseSpeed = Math.Max(1.0, ship.Engine.MaxSpeed);
+            double baseSpeed = Math.Max(1.2, ship.Engine.MaxSpeed);
             double cargoPenalty = 1.0 - ((double)ship.CargoSystem.CurrentLoad / Math.Max(1, ship.CargoSystem.CalculateMaxCapacity()));
             double fuelEfficiency = ship.FuelSystem.Efficiency;
             double effectiveSpeed = baseSpeed * cargoPenalty * fuelEfficiency;

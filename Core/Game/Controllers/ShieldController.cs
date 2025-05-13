@@ -24,6 +24,8 @@ namespace SpacePirates.Console.Game.Controllers
             if (_gameState?.PlayerShip?.Shield != null)
             {
                 var shield = _gameState.PlayerShip.Shield;
+                var ship = _gameState.PlayerShip;
+                var api = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
                 if (!shield.IsActive && !shield.Charging)
                 {
                     shield.Charging = true;
@@ -47,6 +49,18 @@ namespace SpacePirates.Console.Game.Controllers
                     _renderer.EndFrame();
                     Thread.Sleep(800);
                     _renderer.ShowMessage(_defaultHelpText);
+                    // Persist shield state
+                    if (api != null)
+                    {
+                        var dto = new {
+                            Shield = new {
+                                CurrentLevel = shield.CurrentLevel,
+                                CurrentIntegrity = shield.CurrentIntegrity,
+                                IsActive = shield.IsActive
+                            }
+                        };
+                        _ = api.UpdateShipStateAsync(ship.Id, dto);
+                    }
                 }
                 else if (shield.IsActive && !shield.Charging)
                 {
@@ -56,6 +70,18 @@ namespace SpacePirates.Console.Game.Controllers
                     _renderer.EndFrame();
                     Thread.Sleep(800);
                     _renderer.ShowMessage(_defaultHelpText);
+                    // Persist shield state
+                    if (api != null)
+                    {
+                        var dto = new {
+                            Shield = new {
+                                CurrentLevel = shield.CurrentLevel,
+                                CurrentIntegrity = shield.CurrentIntegrity,
+                                IsActive = shield.IsActive
+                            }
+                        };
+                        _ = api.UpdateShipStateAsync(ship.Id, dto);
+                    }
                 }
             }
         }

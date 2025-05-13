@@ -23,44 +23,14 @@ namespace SpacePirates.Console.UI.Views.Map
 
         protected override void RenderMapObjects(IBufferWriter buffer)
         {
-            int offsetX = _bounds.X + 5, offsetY = _bounds.Y + 2;
-            var systemPositions = new Dictionary<(int X, int Y), SolarSystem>();
-            foreach (var sys in _galaxy.SolarSystems)
-            {
-                int x = offsetX + (int)(sys.X / 2);
-                int y = offsetY + (int)(sys.Y / 4);
-                var key = (x, y);
-                if (!systemPositions.ContainsKey(key))
-                    systemPositions[key] = sys;
-            }
-            _selectedSystem = null;
-            _systemUnderCursor = null;
-            for (int y = _bounds.Y + 1; y < _bounds.Y + _bounds.Height - 1; y++)
-            {
-                for (int x = _bounds.X + 1; x < _bounds.X + _bounds.Width - 1; x++)
-                {
-                    bool isCursor = (x == _cursorX && y == _cursorY);
-                    if (systemPositions.TryGetValue((x, y), out var sys))
-                    {
-                        if (isCursor)
-                        {
-                            buffer.DrawChar(x, y, 'O', ConsoleColor.Black, ConsoleColor.Yellow);
-                            _selectedSystem = sys;
-                            _systemUnderCursor = sys;
-                        }
-                        else
-                            buffer.DrawChar(x, y, 'O', ConsoleColor.Yellow, ConsoleColor.Black);
-                    }
-                    else if (isCursor)
-                    {
-                        buffer.DrawChar(x, y, ' ', null, ConsoleColor.Yellow);
-                    }
-                    else
-                    {
-                        buffer.DrawChar(x, y, ' ', null, ConsoleColor.Black);
-                    }
-                }
-            }
+            SpacePirates.Console.UI.Helpers.MapRenderer.RenderSolarSystems(
+                buffer,
+                _galaxy.SolarSystems,
+                _bounds,
+                CursorPosition,
+                out _selectedSystem,
+                out _systemUnderCursor
+            );
             buffer.DrawString(_bounds.X + 2, _bounds.Y, $"Galaxy: {_galaxy.Name}", ConsoleColor.Cyan, ConsoleColor.Black);
         }
 

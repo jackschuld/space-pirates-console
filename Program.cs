@@ -7,7 +7,6 @@ using SpacePirates.API.Models;
 using SpacePirates.API.Models.ShipComponents;
 using SpacePirates.Console.UI.Views;
 using SpacePirates.Console.Game.Engine;
-
 namespace SpacePirates.Console;
 
 public class Program

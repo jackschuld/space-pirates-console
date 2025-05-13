@@ -6,7 +6,7 @@ namespace SpacePirates.Console.UI.Controls
 {
     public class SolarSystemControls : GameControls
     {
-        public override void HandleInput(ConsoleKeyInfo key, BaseView view)
+        public override async System.Threading.Tasks.Task HandleInput(ConsoleKeyInfo key, BaseView view)
         {
             switch (char.ToLower(key.KeyChar))
             {
@@ -67,6 +67,25 @@ namespace SpacePirates.Console.UI.Controls
                         {
                             int y = char.ToUpper(yPart[0]) - 'A' + 1;
                             flyMethod.Invoke(engineM, new object[] { x, y });
+                            // After flying, update ship fuel in backend
+                            var gameStatePropFly = engineM.GetType().GetField("_gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                            var gameStateFly = gameStatePropFly?.GetValue(engineM);
+                            var playerShipPropFly = gameStateFly?.GetType().GetProperty("PlayerShip");
+                            var playerShipFly = playerShipPropFly?.GetValue(gameStateFly);
+                            var shipIdProp = playerShipFly?.GetType().GetProperty("Id");
+                            var fuelSystemProp = playerShipFly?.GetType().GetProperty("FuelSystem");
+                            var fuelSystem = fuelSystemProp?.GetValue(playerShipFly);
+                            var currentFuelProp = fuelSystem?.GetType().GetProperty("CurrentFuel");
+                            if (shipIdProp != null && currentFuelProp != null)
+                            {
+                                int shipId = (int)shipIdProp.GetValue(playerShipFly);
+                                double currentFuel = Convert.ToDouble(currentFuelProp.GetValue(fuelSystem));
+                                var api = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
+                                if (api != null)
+                                {
+                                    _ = api.UpdateShipFuelAsync(shipId, currentFuel);
+                                }
+                            }
                         }
                         else
                         {
@@ -231,12 +250,13 @@ namespace SpacePirates.Console.UI.Controls
                     }
 
                     // Simulate mining each resource
+                    var apiClient = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
                     foreach (var res in planetToDrill.Resources)
                     {
                         int originalAmount = res.AmountAvailable;
                         if (originalAmount <= 0) continue;
                         int steps = 10;
-                        int msPerStep = 1500; // 1.5 seconds per 10%
+                        int msPerStep = 750; // .75 seconds per 10%
                         for (int i = 1; i <= steps; i++)
                         {
                             int percent = i * 10;
@@ -244,9 +264,27 @@ namespace SpacePirates.Console.UI.Controls
                             endFrameD?.Invoke(rendererD, null);
                             System.Threading.Thread.Sleep(msPerStep);
                         }
-                        // Simulate resource extraction (no backend update yet)
-                        showMessageD?.Invoke(rendererD, new object[] { $"Mined {originalAmount} units of {ResourceHelper.GetResourceName(res.Resource.Name)}!", true });
-                        endFrameD?.Invoke(rendererD, null);
+                        // Call backend to update planet and ship cargo
+                        if (apiClient != null)
+                        {
+                            var result = await apiClient.MinePlanetResourceAsync(planetToDrill.Id, res.Resource.Id, originalAmount, ((dynamic)playerShipD).Id);
+                            if (result == null)
+                            {
+                                showMessageD?.Invoke(rendererD, new object[] { $"[ERROR] Failed to update backend for mining {ResourceHelper.GetResourceName(res.Resource.Name)}.", true });
+                                endFrameD?.Invoke(rendererD, null);
+                            }
+                            else
+                            {
+                                // Optionally update local resource/cargo state here if needed
+                                showMessageD?.Invoke(rendererD, new object[] { $"Mined {originalAmount} units of {ResourceHelper.GetResourceName(res.Resource.Name)}! (Synced)", true });
+                                endFrameD?.Invoke(rendererD, null);
+                            }
+                        }
+                        else
+                        {
+                            showMessageD?.Invoke(rendererD, new object[] { $"[ERROR] ApiClient not found for mining {ResourceHelper.GetResourceName(res.Resource.Name)}.", true });
+                            endFrameD?.Invoke(rendererD, null);
+                        }
                         System.Threading.Thread.Sleep(800);
                     }
                     showMessageD?.Invoke(rendererD, new object[] { "Drilling complete! Tab to toggle instructions | ESC to exit", false });

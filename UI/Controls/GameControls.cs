@@ -7,6 +7,30 @@ namespace SpacePirates.Console.UI.Controls
     {
         public override void HandleInput(ConsoleKeyInfo key, BaseView view)
         {
+            if (IsQuitConfirmActive())
+            {
+                // Handle quit confirmation keys
+                if (key.Key == ConsoleKey.Y)
+                {
+                    // Actually quit
+                    Environment.Exit(0); // or set a flag to stop the game loop
+                }
+                else if (key.Key == ConsoleKey.N)
+                {
+                    // Cancel quit confirmation
+                    var engine = GetEngine();
+                    if (engine != null)
+                    {
+                        var field = engine.GetType().GetField("_showQuitConfirm", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (field != null) field.SetValue(engine, false);
+                    }
+                    var cr = (SpacePirates.Console.UI.ConsoleRenderer.ConsoleRenderer)GetRenderer();
+                    cr.SetHelpText("Tab to toggle instructions | ESC to exit");
+                    cr.EndFrame();
+                }
+                return;
+            }
+
             switch (key.Key)
             {
                 case ConsoleKey.Tab:

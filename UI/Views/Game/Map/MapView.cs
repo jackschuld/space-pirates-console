@@ -21,22 +21,31 @@ namespace SpacePirates.Console.UI.Views.Map
         }
 
         public (int X, int Y, int Width, int Height) Bounds => _bounds;
+        public (int X, int Y) CursorPosition => (_cursorX, _cursorY);
+
+        protected bool IsUnderCursor(int x, int y) => x == _cursorX && y == _cursorY;
+
+        protected void MoveCursor(int dx, int dy)
+        {
+            _cursorX = Math.Max(_bounds.X + 1, Math.Min(_bounds.X + _bounds.Width - 2, _cursorX + dx));
+            _cursorY = Math.Max(_bounds.Y + 1, Math.Min(_bounds.Y + _bounds.Height - 2, _cursorY + dy));
+        }
 
         public override void HandleInput(ConsoleKeyInfo keyInfo)
         {
             switch (char.ToLower(keyInfo.KeyChar))
             {
                 case 'h':
-                    _cursorX = Math.Max(_bounds.X + 1, _cursorX - 1);
+                    MoveCursor(-1, 0);
                     break;
                 case 'l':
-                    _cursorX = Math.Min(_bounds.X + _bounds.Width - 2, _cursorX + 1);
+                    MoveCursor(1, 0);
                     break;
                 case 'k':
-                    _cursorY = Math.Max(_bounds.Y + 1, _cursorY - 1);
+                    MoveCursor(0, -1);
                     break;
                 case 'j':
-                    _cursorY = Math.Min(_bounds.Y + _bounds.Height - 2, _cursorY + 1);
+                    MoveCursor(0, 1);
                     break;
             }
         }
