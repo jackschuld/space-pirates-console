@@ -6,7 +6,7 @@ namespace SpacePirates.Console.UI.Controls
 {
     public class SolarSystemControls : GameControls
     {
-        public override async System.Threading.Tasks.Task HandleInput(ConsoleKeyInfo key, BaseView view)
+        public override void HandleInput(ConsoleKeyInfo key, BaseView view)
         {
             switch (char.ToLower(key.KeyChar))
             {
@@ -193,102 +193,7 @@ namespace SpacePirates.Console.UI.Controls
                     }
                     break;
                 case 'd':
-                    // Drill/Mine planet logic
-                    var engineD = AppDomain.CurrentDomain.GetData("GameEngine");
-                    if (engineD == null) return;
-                    var gameStatePropD = engineD.GetType().GetField("_gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    var rendererD = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
-                    var showMessageD = rendererD?.GetType().GetMethod("ShowMessage");
-                    var endFrameD = rendererD?.GetType().GetMethod("EndFrame");
-                    var gameStateD = gameStatePropD?.GetValue(engineD);
-                    var playerShipPropD = gameStateD?.GetType().GetProperty("PlayerShip");
-                    var playerShipD = playerShipPropD?.GetValue(gameStateD);
-                    var shipPosProp = playerShipD?.GetType().GetProperty("Position");
-                    var shipPos = shipPosProp?.GetValue(playerShipD);
-                    var shipXProp = shipPos?.GetType().GetProperty("X");
-                    var shipYProp = shipPos?.GetType().GetProperty("Y");
-                    int shipX = shipXProp != null ? (int)Math.Round(Convert.ToDouble(shipXProp.GetValue(shipPos))) : -1;
-                    int shipY = shipYProp != null ? (int)Math.Round(Convert.ToDouble(shipYProp.GetValue(shipPos))) : -1;
-
-                    // Get the current SolarSystem and its planets
-                    SpacePirates.API.Models.SolarSystem? system = null;
-                    (int X, int Y, int Width, int Height) bounds = (0, 0, 0, 0);
-                    if (view is SpacePirates.Console.UI.Views.SolarSystemMapView ssmvDrill)
-                    {
-                        system = ssmvDrill.System;
-                        bounds = ssmvDrill.Bounds;
-                    }
-                    else if (view is SpacePirates.Console.UI.Views.GameView gv && gv.Map is SpacePirates.Console.UI.Views.SolarSystemMapView mapViewD)
-                    {
-                        system = mapViewD.System;
-                        bounds = mapViewD.Bounds;
-                    }
-                    if (system == null)
-                    {
-                        showMessageD?.Invoke(rendererD, new object[] { "No solar system context found.", true });
-                        endFrameD?.Invoke(rendererD, null);
-                        break;
-                    }
-
-                    // Calculate map coordinates for the ship (as rendered)
-                    int mapShipX = bounds.X + shipX;
-                    int mapShipY = bounds.Y + shipY;
-
-                    // Find planet at ship's position (within atmosphere)
-                    const int DRILL_RADIUS = 5;
-                    var planetToDrill = system.Planets
-                        .FirstOrDefault(p => Math.Sqrt(Math.Pow((int)Math.Round(p.X) - mapShipX, 2) + Math.Pow((int)Math.Round(p.Y) - mapShipY, 2)) <= DRILL_RADIUS);
-                    if (planetToDrill == null)
-                    {
-                        showMessageD?.Invoke(rendererD, new object[] { "You must within the atmosphere of a planet to drill. Type 'f' followed by the coordinates to fly to the planet.", true });
-                        endFrameD?.Invoke(rendererD, null);
-                        break;
-                    } else if (!planetToDrill.IsDiscovered) {
-                        showMessageD?.Invoke(rendererD, new object[] { "You must discover the planet before you can drill it. Type 'e' followed by the 4-digit id to examine the planet.", true });
-                        endFrameD?.Invoke(rendererD, null);
-                        break;
-                    }
-
-                    // Simulate mining each resource
-                    var apiClient = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
-                    foreach (var res in planetToDrill.Resources)
-                    {
-                        int originalAmount = res.AmountAvailable;
-                        if (originalAmount <= 0) continue;
-                        int steps = 10;
-                        int msPerStep = 750; // .75 seconds per 10%
-                        for (int i = 1; i <= steps; i++)
-                        {
-                            int percent = i * 10;
-                            showMessageD?.Invoke(rendererD, new object[] { $"Drilling {ResourceHelper.GetResourceName(res.Resource.Name)}... {percent}%", false });
-                            endFrameD?.Invoke(rendererD, null);
-                            System.Threading.Thread.Sleep(msPerStep);
-                        }
-                        // Call backend to update planet and ship cargo
-                        if (apiClient != null)
-                        {
-                            var result = await apiClient.MinePlanetResourceAsync(planetToDrill.Id, res.Resource.Id, originalAmount, ((dynamic)playerShipD).Id);
-                            if (result == null)
-                            {
-                                showMessageD?.Invoke(rendererD, new object[] { $"[ERROR] Failed to update backend for mining {ResourceHelper.GetResourceName(res.Resource.Name)}.", true });
-                                endFrameD?.Invoke(rendererD, null);
-                            }
-                            else
-                            {
-                                // Optionally update local resource/cargo state here if needed
-                                showMessageD?.Invoke(rendererD, new object[] { $"Mined {originalAmount} units of {ResourceHelper.GetResourceName(res.Resource.Name)}! (Synced)", true });
-                                endFrameD?.Invoke(rendererD, null);
-                            }
-                        }
-                        else
-                        {
-                            showMessageD?.Invoke(rendererD, new object[] { $"[ERROR] ApiClient not found for mining {ResourceHelper.GetResourceName(res.Resource.Name)}.", true });
-                            endFrameD?.Invoke(rendererD, null);
-                        }
-                        System.Threading.Thread.Sleep(800);
-                    }
-                    showMessageD?.Invoke(rendererD, new object[] { "Drilling complete! Tab to toggle instructions | ESC to exit", false });
-                    endFrameD?.Invoke(rendererD, null);
+                    DrillPlanetAsync(view);
                     break;
                 default:
                     base.HandleInput(key, view);
@@ -323,6 +228,161 @@ namespace SpacePirates.Console.UI.Controls
                 var renderer = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
                 var setTempNotif = renderer?.GetType().GetMethod("SetTemporaryNotification");
                 setTempNotif?.Invoke(renderer, new object[] { $"Failed to examine planet '{planet.Name}'." });
+            }
+        }
+
+        private async void DrillPlanetAsync(BaseView view)
+        {
+            try
+            {
+                var engineD = AppDomain.CurrentDomain.GetData("GameEngine");
+                if (engineD == null) return;
+                var gameStatePropD = engineD.GetType().GetField("_gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var rendererD = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
+                var showMessageD = rendererD?.GetType().GetMethod("ShowMessage");
+                var endFrameD = rendererD?.GetType().GetMethod("EndFrame");
+                var gameStateD = gameStatePropD?.GetValue(engineD);
+                var playerShipPropD = gameStateD?.GetType().GetProperty("PlayerShip");
+                var playerShipD = playerShipPropD?.GetValue(gameStateD);
+                var shipPosProp = playerShipD?.GetType().GetProperty("Position");
+                var shipPos = shipPosProp?.GetValue(playerShipD);
+                var shipXProp = shipPos?.GetType().GetProperty("X");
+                var shipYProp = shipPos?.GetType().GetProperty("Y");
+                int shipX = shipXProp != null ? (int)Math.Round(Convert.ToDouble(shipXProp.GetValue(shipPos))) : -1;
+                int shipY = shipYProp != null ? (int)Math.Round(Convert.ToDouble(shipYProp.GetValue(shipPos))) : -1;
+
+                // Get the current SolarSystem and its planets
+                SpacePirates.API.Models.SolarSystem? system = null;
+                (int X, int Y, int Width, int Height) bounds = (0, 0, 0, 0);
+                if (view is SpacePirates.Console.UI.Views.SolarSystemMapView ssmvDrill)
+                {
+                    system = ssmvDrill.System;
+                    bounds = ssmvDrill.Bounds;
+                }
+                else if (view is SpacePirates.Console.UI.Views.GameView gv && gv.Map is SpacePirates.Console.UI.Views.SolarSystemMapView mapViewD)
+                {
+                    system = mapViewD.System;
+                    bounds = mapViewD.Bounds;
+                }
+                if (system == null)
+                {
+                    showMessageD?.Invoke(rendererD, new object[] { "No solar system context found.", true });
+                    endFrameD?.Invoke(rendererD, null);
+                    return;
+                }
+
+                // Calculate map coordinates for the ship (as rendered)
+                int mapShipX = bounds.X + shipX;
+                int mapShipY = bounds.Y + shipY;
+
+                // Find planet at ship's position (within atmosphere)
+                const int DRILL_RADIUS = 5;
+                var planetToDrill = system.Planets
+                    .FirstOrDefault(p => Math.Sqrt(Math.Pow((int)Math.Round(p.X) - mapShipX, 2) + Math.Pow((int)Math.Round(p.Y) - mapShipY, 2)) <= DRILL_RADIUS);
+                if (planetToDrill == null)
+                {
+                    showMessageD?.Invoke(rendererD, new object[] { "You must within the atmosphere of a planet to drill. Type 'f' followed by the coordinates to fly to the planet.", true });
+                    endFrameD?.Invoke(rendererD, null);
+                    return;
+                } else if (!planetToDrill.IsDiscovered) {
+                    showMessageD?.Invoke(rendererD, new object[] { "You must discover the planet before you can drill it. Type 'e' followed by the 4-digit id to examine the planet.", true });
+                    endFrameD?.Invoke(rendererD, null);
+                    return;
+                }
+
+                // Simulate mining each resource
+                var apiClient = AppDomain.CurrentDomain.GetData("ApiClient") as SpacePirates.Console.UI.Components.ApiClient;
+                var cargoSystem = ((dynamic)playerShipD).CargoSystem;
+                foreach (var res in planetToDrill.Resources)
+                {
+                    int originalAmount = res.AmountAvailable;
+                    if (originalAmount <= 0) continue;
+                    // Cargo space check
+                    if (cargoSystem != null)
+                    {
+                        int maxCapacity = cargoSystem.CalculateMaxCapacity();
+
+                        int currentLoad = cargoSystem.CurrentLoad;
+                        int remainingSpace = maxCapacity - currentLoad;
+                        if (originalAmount > remainingSpace)
+                        {
+                            showMessageD?.Invoke(rendererD, new object[] { $"Not enough cargo space to mine {ResourceHelper.GetResourceName(res.Resource.Name)}. {remainingSpace} units free.", true });
+                            endFrameD?.Invoke(rendererD, null);
+                            System.Threading.Thread.Sleep(1500);
+                            break; // Stop drilling further resources
+                        }
+                    }
+                    int steps = 10;
+                    int msPerStep = 750; // .75 seconds per 10%
+                    for (int i = 1; i <= steps; i++)
+                    {
+                        int percent = i * 10;
+                        showMessageD?.Invoke(rendererD, new object[] { $"Drilling {ResourceHelper.GetResourceName(res.Resource.Name)}... {percent}%", false });
+                        endFrameD?.Invoke(rendererD, null);
+                        System.Threading.Thread.Sleep(msPerStep);
+                    }
+                    // Call backend to update planet and ship cargo
+                    if (apiClient != null)
+                    {
+                        bool success = await apiClient.MinePlanetResourceAsync(planetToDrill.Id, res.Resource.Id, originalAmount, ((dynamic)playerShipD).Id);
+                        if (!success)
+                        {
+                            showMessageD?.Invoke(rendererD, new object[] { $"[ERROR] Failed to update backend for mining {ResourceHelper.GetResourceName(res.Resource.Name)}.", true });
+                            endFrameD?.Invoke(rendererD, null);
+                        }
+                        else
+                        {
+                            showMessageD?.Invoke(rendererD, new object[] { $"Mined {originalAmount} units of {ResourceHelper.GetResourceName(res.Resource.Name)}! (Synced)", true });
+                            endFrameD?.Invoke(rendererD, null);
+                            // Update local resource value
+                            res.AmountAvailable -= originalAmount;
+                            // Update local ship cargo (if possible)
+                            if (cargoSystem != null)
+                            {
+                                // Find cargo item for this resource without using a lambda on dynamic
+                                object cargoItem = null;
+                                foreach (var ci in cargoSystem.CargoItems)
+                                {
+                                    if (ci.ResourceId == res.Resource.Id)
+                                    {
+                                        cargoItem = ci;
+                                        break;
+                                    }
+                                }
+                                if (cargoItem != null)
+                                    ((dynamic)cargoItem).Amount += originalAmount;
+                                else
+                                    cargoSystem.CargoItems.Add(new SpacePirates.API.Models.ShipComponents.CargoItem { ResourceId = res.Resource.Id, Amount = originalAmount, Resource = res.Resource });
+                                // Always recalculate CurrentLoad as the sum of all cargo item amounts (no lambda on dynamic)
+                                int total = 0;
+                                foreach (var ci in cargoSystem.CargoItems)
+                                    total += ci.Amount;
+                                cargoSystem.CurrentLoad = total;
+                            }
+                            // Re-render the ship status panel if present
+                            if (view is SpacePirates.Console.UI.Views.GameView gameView &&
+                                gameView.Panel is SpacePirates.Console.UI.Views.ShipStatusView shipStatus)
+                            {
+                                var localGameState = gameStatePropD?.GetValue(engineD) as SpacePirates.Console.Core.Interfaces.IGameState;
+                                if (localGameState != null)
+                                    shipStatus.UpdateStatus(localGameState);
+                                shipStatus.Render();
+                            }
+                        }
+                    }
+                    System.Threading.Thread.Sleep(800);
+                }
+                showMessageD?.Invoke(rendererD, new object[] { "Drilling complete! Tab to toggle instructions | ESC to exit", false });
+                endFrameD?.Invoke(rendererD, null);
+            }
+            catch (Exception ex)
+            {
+                var rendererD = AppDomain.CurrentDomain.GetData("ConsoleRenderer");
+                var showMessageD = rendererD?.GetType().GetMethod("ShowMessage");
+                var endFrameD = rendererD?.GetType().GetMethod("EndFrame");
+                showMessageD?.Invoke(rendererD, new object[] { $"[ERROR] {ex.Message}", true });
+                endFrameD?.Invoke(rendererD, null);
+                System.Console.WriteLine(ex);
             }
         }
     }

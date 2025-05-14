@@ -145,7 +145,7 @@ namespace SpacePirates.Console.UI.Components
             }
         }
 
-        public async Task<dynamic?> MinePlanetResourceAsync(int planetId, int resourceId, int amount, int shipId)
+        public async Task<bool> MinePlanetResourceAsync(int planetId, int resourceId, int amount, int shipId)
         {
             var req = new {
                 PlanetId = planetId,
@@ -154,14 +154,7 @@ namespace SpacePirates.Console.UI.Components
                 ShipId = shipId
             };
             var resp = await _http.PostAsJsonAsync($"{_baseUrl}/api/game/mine-planet-resource", req);
-            if (!resp.IsSuccessStatusCode)
-            {
-                System.Console.WriteLine($"API returned error: {resp.StatusCode}");
-                return null;
-            }
-            var json = await resp.Content.ReadAsStringAsync();
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<dynamic>(json, options);
+            return resp.IsSuccessStatusCode;
         }
     }
 

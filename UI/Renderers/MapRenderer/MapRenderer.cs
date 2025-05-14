@@ -73,7 +73,7 @@ namespace SpacePirates.Console.UI.Helpers
             int minY = bounds.Y + 1;
             int maxY = bounds.Y + bounds.Height - 2;
             ConsoleColor[] starColors = new[] { ConsoleColor.DarkGray, ConsoleColor.Gray, ConsoleColor.White, ConsoleColor.Cyan, ConsoleColor.Blue, ConsoleColor.Magenta };
-            char[] starChars = new[] { '.', '.', '.', '.', '.', '.', '.', '.', '*', '+', '·' }; // 8/11 are dots
+            char[] starChars = new[] { '.', '.', '.', '.', '.', '.', '.', '.', '*', '·', '·', '·', '+', '·' };
             int bgSeed = bounds.GetHashCode() ^ 0xBEEF;
             // Precompute a background map for this view
             var bgMap = new (char ch, ConsoleColor color)[maxX - minX + 1, maxY - minY + 1];
@@ -243,7 +243,7 @@ namespace SpacePirates.Console.UI.Helpers
             // Procedural galaxy-like background
             ConsoleColor[] starColors = new[] { ConsoleColor.DarkGray, ConsoleColor.Gray, ConsoleColor.White, ConsoleColor.Cyan, ConsoleColor.Blue, ConsoleColor.Magenta };
             // Make non-dot stars much less likely
-            char[] starChars = new[] { '.', '.', '.', '.', '.', '.', '.', '.', '*', '+', '·' }; // 8/11 are dots
+            char[] starChars = new[] { '.', '.', '.', '.', '.', '.', '.', '.', '*', '·', '·', '·', '+', '·' };
             int bgSeed = system.Id ^ 0xBEEF;
             var bgRand = new Random(bgSeed);
             // Precompute a background map for this view

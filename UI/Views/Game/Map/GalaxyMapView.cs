@@ -75,10 +75,6 @@ namespace SpacePirates.Console.UI.Views.Map
         public override void HandleInput(ConsoleKeyInfo keyInfo)
         {
             base.HandleInput(keyInfo);
-            if (char.ToLower(keyInfo.KeyChar) == 'd')
-            {
-                _showDetails = !_showDetails;
-            }
         }
 
         public override string[] Instructions => new[] { "Warp: w + System ID" };
